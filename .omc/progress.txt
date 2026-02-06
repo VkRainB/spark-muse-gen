@@ -1,0 +1,45 @@
+# Ralph 进度日志
+开始时间: 2026-02-06T07:15:00.000Z
+
+## 项目概述
+将 Gemini 3 Pro Image Preview 从原生 JavaScript 迁移到 Nuxt 4 + Vue 3 + Nuxt UI 4 + Tailwind CSS
+
+## 源码分析
+- 原始代码: source/index.html + source/app.js（约 3000+ 行）
+- 目标架构: Nuxt 4 模块化架构
+
+## 代码库模式
+（尚未发现模式）
+
+## 关键决策
+- 使用 Nuxt 4.3.0+（2025年7月稳定版发布）
+- 使用 Nuxt UI 4 及语义化颜色（success, error, warning, info）
+- 使用 Tailwind CSS（Nuxt UI 依赖，非 UnoCSS）
+- 使用 Vite 7.x（Nuxt 4 内置）
+- 使用 Pinia 配合 pinia-plugin-persistedstate
+- 使用 pnpm 作为包管理器
+- SPA 模式（ssr: false）以匹配原始纯前端架构
+
+## 用户故事摘要（共 20 个）
+1. 项目脚手架与配置
+2. 类型定义
+3. 工具函数迁移
+4. IndexedDB Composable
+5. Provider Store 与 Composable
+6. Chat Store 与 Composable
+7. 图像生成 Composable
+8. 文件系统 Composable
+9. 主题与 Toast Composables
+10. UI 组件 - 核心
+11. 图像生成器组件
+12. 聊天组件
+13. 设置组件
+14. BananaTool 与自定义提示词
+15. 切片工具
+16. 表情包制作模式
+17. XHS 灵感实验室模块
+18. 布局与页面
+19. 设置 Store
+20. 最终集成与测试
+
+---
