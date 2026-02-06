@@ -1,0 +1,40 @@
+.omc/
+
+# Nuxt dev/build outputs
+.nuxt/
+.output/
+.data/
+.nitro/
+.cache/
+
+node_modules/
+*.log
+
+# Build & Distribution
+dist/
+.vercel/
+.netlify/
+
+
+.env
+.env.*
+!.env.example
+
+# IDE / Editor
+.vscode/
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+.DS_Store
+.DS_Store?
+
+*.local
+*.bak
+*.temp
+*.tmp
