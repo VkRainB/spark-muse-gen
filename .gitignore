@@ -1,40 +1,25 @@
-# .omc/
-
 # Nuxt dev/build outputs
-.nuxt/
-.output/
-.data/
-.nitro/
-.cache/
+.output
+.data
+.nuxt
+.nitro
+.cache
+dist
 
-node_modules/
+# Node dependencies
+node_modules
+
+# Logs
+logs
 *.log
 
-# Build & Distribution
-dist/
-.vercel/
-.netlify/
+# Misc
+.DS_Store
+.fleet
+.idea
 
-
+# Local env files
 .env
 .env.*
 !.env.example
-
-# IDE / Editor
-.vscode/
-!.vscode/settings.json
-!.vscode/extensions.json
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-Thumbs.db
-
-.DS_Store
-.DS_Store?
-
-*.local
-*.bak
-*.temp
-*.tmp
+.ace-tool/

@@ -1,0 +1,27 @@
+{
+  "name": "gemini-3-pro-image-preview",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@nuxt/ui": "^4.4.0",
+    "@pinia/nuxt": "^0.11.3",
+    "jszip": "^3.10.1",
+    "marked": "^17.0.1",
+    "nuxt": "^3.21.0",
+    "pinia": "^3.0.4",
+    "pinia-plugin-persistedstate": "^4.7.1",
+    "vue": "latest"
+  },
+  "devDependencies": {
+    "@nuxt/devtools": "^3.1.1",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.2.4"
+  }
+}
