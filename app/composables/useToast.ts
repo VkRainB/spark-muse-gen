@@ -1,3 +1,5 @@
+import { useToast } from '@nuxt/ui/composables'
+
 export function useAppToast() {
   const toast = useToast()
 
@@ -5,7 +7,7 @@ export function useAppToast() {
     toast.add({
       title,
       description,
-      color: 'green' as const,
+      color: 'success' as const,
       icon: 'i-heroicons-check-circle'
     })
   }
@@ -14,7 +16,7 @@ export function useAppToast() {
     toast.add({
       title,
       description,
-      color: 'red' as const,
+      color: 'error' as const,
       icon: 'i-heroicons-x-circle'
     })
   }
@@ -23,7 +25,7 @@ export function useAppToast() {
     toast.add({
       title,
       description,
-      color: 'yellow' as const,
+      color: 'warning' as const,
       icon: 'i-heroicons-exclamation-triangle'
     })
   }
@@ -32,7 +34,7 @@ export function useAppToast() {
     toast.add({
       title,
       description,
-      color: 'blue' as const,
+      color: 'info' as const,
       icon: 'i-heroicons-information-circle'
     })
   }

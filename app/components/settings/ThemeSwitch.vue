@@ -10,18 +10,18 @@ const themeOptions = [
 
 <template>
   <div class="flex items-center gap-2">
-    <UButtonGroup>
+    <div class="flex flex-wrap gap-2">
       <UButton
         v-for="option in themeOptions"
         :key="option.value"
         :icon="option.icon"
-        :color="theme === option.value ? 'primary' : 'gray'"
+        :color="theme === option.value ? 'primary' : 'neutral'"
         :variant="theme === option.value ? 'solid' : 'ghost'"
         size="sm"
         @click="setTheme(option.value as 'light' | 'dark' | 'system')"
       >
         {{ option.label }}
       </UButton>
-    </UButtonGroup>
+    </div>
   </div>
 </template>

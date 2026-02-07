@@ -37,7 +37,7 @@ watch(() => chat.currentMessages.value.length, () => {
               <UButton
                 icon="i-heroicons-trash"
                 size="xs"
-                color="red"
+                color="error"
                 variant="ghost"
                 class="opacity-0 group-hover:opacity-100"
                 @click.stop="chat.deleteSession(session.id)"
@@ -54,7 +54,7 @@ watch(() => chat.currentMessages.value.length, () => {
     <!-- 中间: 聊天和生成区域 -->
     <div class="flex-1 flex flex-col border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
       <!-- 消息列表 -->
-      <MessageList
+      <ChatMessageList
         ref="messageListRef"
         :messages="chat.currentMessages.value"
         class="flex-1"
@@ -78,13 +78,13 @@ watch(() => chat.currentMessages.value.length, () => {
 
         <div class="p-4 space-y-6">
           <!-- Banana 提示词 -->
-          <BananaTool @apply="() => {}" />
+          <ToolsBananaTool @apply="() => {}" />
 
           <!-- 切片工具 -->
-          <SlicerTool />
+          <ToolsSlicerTool />
 
           <!-- 表情包 -->
-          <StickerMode />
+          <ToolsStickerMode />
         </div>
       </div>
     </div>

@@ -7,8 +7,9 @@ interface BananaPrompt {
 }
 
 const SOURCES = [
-  'https://raw.githubusercontent.com/banana-prompt-quicker/prompts/main/prompts.json',
-  'https://cdn.jsdelivr.net/gh/banana-prompt-quicker/prompts@main/prompts.json'
+  'https://cdn.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/prompts.json',
+  'https://fastly.jsdelivr.net/gh/glidea/banana-prompt-quicker@main/prompts.json',
+  'https://raw.githubusercontent.com/glidea/banana-prompt-quicker/main/prompts.json'
 ]
 
 const CACHE_KEY = 'banana_prompts_cache'

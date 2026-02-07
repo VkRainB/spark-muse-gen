@@ -9,9 +9,12 @@ export default defineNuxtConfig({
   },
 
   modules: [
+    '@nuxtjs/color-mode',
     '@nuxt/ui',
     '@pinia/nuxt'
   ],
+
+  css: ['~/assets/css/main.css'],
 
   colorMode: {
     preference: 'system',

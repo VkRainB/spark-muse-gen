@@ -129,13 +129,13 @@ const getImageSrc = (image: { data: string; mimeType: string }) => {
 
         <div v-if="referenceImage" class="flex items-center gap-2">
           <img :src="referenceImage" class="w-12 h-12 object-cover rounded" alt="Reference" />
-          <UButton icon="i-heroicons-x-mark" color="gray" variant="ghost" size="xs" @click="clearReference" />
+          <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" size="xs" @click="clearReference" />
         </div>
       </div>
     </div>
 
     <!-- 进度条 -->
-    <SmartProgressBar
+    <UiSmartProgressBar
       v-if="isGenerating"
       :progress="progress"
       :task="currentTask"
@@ -156,7 +156,7 @@ const getImageSrc = (image: { data: string; mimeType: string }) => {
         v-else
         @click="cancelGeneration"
         icon="i-heroicons-stop"
-        color="red"
+        color="error"
       >
         取消
       </UButton>
@@ -175,8 +175,8 @@ const getImageSrc = (image: { data: string; mimeType: string }) => {
           alt="Generated"
         />
         <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2 rounded-lg">
-          <UButton icon="i-heroicons-arrow-down-tray" size="sm" color="white" variant="ghost" />
-          <UButton icon="i-heroicons-magnifying-glass-plus" size="sm" color="white" variant="ghost" />
+          <UButton icon="i-heroicons-arrow-down-tray" size="sm" color="neutral" variant="ghost" />
+          <UButton icon="i-heroicons-magnifying-glass-plus" size="sm" color="neutral" variant="ghost" />
         </div>
       </div>
     </div>

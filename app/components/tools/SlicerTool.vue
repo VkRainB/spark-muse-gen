@@ -50,20 +50,20 @@ const handleSlice = async () => {
 
         <!-- 设置 -->
         <div class="w-48 space-y-3">
-          <UFormGroup label="行数">
+          <UFormField label="行数">
             <UInput v-model.number="config.rows" type="number" min="1" max="10" />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="列数">
+          <UFormField label="列数">
             <UInput v-model.number="config.cols" type="number" min="1" max="10" />
-          </UFormGroup>
+          </UFormField>
 
-          <UFormGroup label="填充色">
+          <UFormField label="填充色">
             <input v-model="config.fillColor" type="color" class="w-full h-8 rounded cursor-pointer" />
-          </UFormGroup>
+          </UFormField>
 
           <div class="flex items-center gap-2">
-            <UToggle v-model="config.highRes" />
+            <USwitch v-model="config.highRes" />
             <span class="text-sm">2x 高清</span>
           </div>
 
@@ -78,10 +78,10 @@ const handleSlice = async () => {
         <UButton :loading="isProcessing" icon="i-heroicons-scissors" @click="handleSlice">
           开始切片
         </UButton>
-        <UButton v-if="slices.length > 0" icon="i-heroicons-arrow-down-tray" color="green" @click="downloadAll()">
+        <UButton v-if="slices.length > 0" icon="i-heroicons-arrow-down-tray" color="success" @click="downloadAll()">
           下载全部 (ZIP)
         </UButton>
-        <UButton color="gray" variant="ghost" icon="i-heroicons-trash" @click="clear">
+        <UButton color="neutral" variant="ghost" icon="i-heroicons-trash" @click="clear">
           清除
         </UButton>
       </div>

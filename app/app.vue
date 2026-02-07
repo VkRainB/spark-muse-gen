@@ -10,12 +10,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <NuxtLayout>
-    <NuxtPage />
-  </NuxtLayout>
-
-  <!-- Toast 通知 -->
-  <UNotifications />
+  <UApp>
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
+  </UApp>
 </template>
 
 <style>

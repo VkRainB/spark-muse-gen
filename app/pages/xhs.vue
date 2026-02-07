@@ -71,7 +71,7 @@ const handleGenerateStoryboard = async (item: StoryboardItem) => {
               <UButton
                 icon="i-heroicons-trash"
                 size="xs"
-                color="red"
+                color="error"
                 variant="ghost"
                 class="opacity-0 group-hover:opacity-100 mt-1"
                 @click.stop="deleteHistory(item.id)"
@@ -121,7 +121,7 @@ const handleGenerateStoryboard = async (item: StoryboardItem) => {
             <div class="flex gap-2">
               <UButton icon="i-heroicons-clipboard" size="xs" variant="ghost" @click="copyContent" />
               <UButton icon="i-heroicons-bookmark" size="xs" variant="ghost" @click="saveToHistory" />
-              <UButton icon="i-heroicons-trash" size="xs" color="red" variant="ghost" @click="clearCurrent" />
+              <UButton icon="i-heroicons-trash" size="xs" color="error" variant="ghost" @click="clearCurrent" />
             </div>
           </div>
           <div class="prose dark:prose-invert max-w-none whitespace-pre-wrap">

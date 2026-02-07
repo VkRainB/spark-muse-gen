@@ -120,7 +120,7 @@ const handleContextChange = (event: Event) => {
           v-if="!isEnabled"
           icon="i-heroicons-folder-open"
           variant="outline"
-          @click="selectDirectory"
+          @click="() => { void selectDirectory() }"
         >
           选择保存目录
         </UButton>

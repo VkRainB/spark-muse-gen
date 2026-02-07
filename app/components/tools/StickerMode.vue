@@ -72,9 +72,9 @@ const handleGeneratePack = async () => {
     <h3 class="text-lg font-semibold">表情包制作</h3>
 
     <!-- 角色输入 -->
-    <UFormGroup label="角色描述" required>
+    <UFormField label="角色描述" required>
       <UInput v-model="character" placeholder="例如：一只橙色的小猫" />
-    </UFormGroup>
+    </UFormField>
 
     <!-- 表情选择 -->
     <div class="space-y-2">
@@ -117,7 +117,7 @@ const handleGeneratePack = async () => {
     </div>
 
     <!-- 背景选择 -->
-    <UFormGroup label="背景">
+    <UFormField label="背景">
       <div class="flex gap-4">
         <label class="flex items-center gap-2 cursor-pointer">
           <input v-model="background" type="radio" value="white" class="text-primary" />
@@ -128,10 +128,10 @@ const handleGeneratePack = async () => {
           <span>透明背景</span>
         </label>
       </div>
-    </UFormGroup>
+    </UFormField>
 
     <!-- 进度 -->
-    <SmartProgressBar v-if="isGenerating" :progress="progress" task="生成表情包中..." />
+    <UiSmartProgressBar v-if="isGenerating" :progress="progress" task="生成表情包中..." />
 
     <!-- 操作按钮 -->
     <div class="flex gap-2">
@@ -145,7 +145,7 @@ const handleGeneratePack = async () => {
       <UButton
         :disabled="!character.trim() || (selectedEmotions.length === 0 && selectedActions.length === 0) || isGenerating"
         icon="i-heroicons-squares-2x2"
-        color="green"
+        color="success"
         @click="handleGeneratePack"
       >
         批量生成

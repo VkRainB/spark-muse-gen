@@ -80,7 +80,7 @@ watch(() => formData.value.type, (type) => {
           <UButton
             icon="i-heroicons-signal"
             size="xs"
-            color="gray"
+            color="neutral"
             variant="ghost"
             :loading="testingId === provider.id"
             @click="handleTest(provider.id)"
@@ -88,7 +88,7 @@ watch(() => formData.value.type, (type) => {
           <UButton
             icon="i-heroicons-trash"
             size="xs"
-            color="red"
+            color="error"
             variant="ghost"
             @click="removeProvider(provider.id)"
           />
@@ -128,7 +128,7 @@ watch(() => formData.value.type, (type) => {
           </UFormField>
 
           <div class="flex justify-end gap-2 pt-4">
-            <UButton color="gray" variant="ghost" @click="showAddModal = false">取消</UButton>
+            <UButton color="neutral" variant="ghost" @click="showAddModal = false">取消</UButton>
             <UButton @click="handleAdd" :disabled="!formData.name || !formData.apiKey">添加</UButton>
           </div>
         </div>

@@ -60,19 +60,19 @@ const copyContent = () => {
 
       <!-- 操作按钮 -->
       <div class="flex gap-1" :class="isUser ? 'justify-end' : ''">
-        <UButton icon="i-heroicons-clipboard" size="xs" color="gray" variant="ghost" @click="copyContent" />
+        <UButton icon="i-heroicons-clipboard" size="xs" color="neutral" variant="ghost" @click="copyContent" />
         <UButton
           v-if="!isUser"
           icon="i-heroicons-arrow-path"
           size="xs"
-          color="gray"
+          color="neutral"
           variant="ghost"
           @click="$emit('regenerate', message)"
         />
         <UButton
           icon="i-heroicons-trash"
           size="xs"
-          color="red"
+          color="error"
           variant="ghost"
           @click="$emit('delete', message.id)"
         />

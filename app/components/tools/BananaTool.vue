@@ -105,7 +105,7 @@ onMounted(() => {
             <UButton
               icon="i-heroicons-clipboard"
               size="xs"
-              color="gray"
+              color="neutral"
               variant="ghost"
               @click="copyPrompt(item.prompt)"
             />
@@ -119,7 +119,7 @@ onMounted(() => {
             <UButton
               icon="i-heroicons-bookmark"
               size="xs"
-              color="gray"
+              color="neutral"
               variant="ghost"
               @click="saveToCustom(item)"
             />

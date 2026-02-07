@@ -65,7 +65,7 @@ watch(() => props.initialIndex, (val) => {
 </script>
 
 <template>
-  <UModal v-model:open="open" :ui="{ width: 'max-w-5xl' }">
+  <UModal v-model:open="open" :ui="{ content: 'max-w-5xl' }">
     <template #content>
       <div class="relative bg-black">
         <!-- 关闭按钮 -->
