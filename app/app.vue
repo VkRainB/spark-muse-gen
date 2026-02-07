@@ -12,7 +12,7 @@ onMounted(() => {
 <template>
   <UApp>
     <NuxtLayout>
-      <NuxtPage />
+      <NuxtPage :keepalive="{ max: 10 }" />
     </NuxtLayout>
   </UApp>
 </template>
