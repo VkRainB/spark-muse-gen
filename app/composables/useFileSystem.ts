@@ -61,11 +61,24 @@ export function useFileSystem() {
       const fileHandle = await directoryHandle.value.getFileHandle(filename, { create: true })
       const writable = await fileHandle.createWritable()
 
-      // Base64 转 Blob
+      // HTTP/HTTPS URL 直接拉取为 Blob
+      if (data.startsWith('http://') || data.startsWith('https://')) {
+        const response = await fetch(data)
+        if (!response.ok) {
+          throw new Error(`Fetch image failed: ${response.status}`)
+        }
+        const blob = await response.blob()
+        await writable.write(blob)
+        await writable.close()
+        return true
+      }
+
+      // Base64 / DataURL 转 Blob
       const cleanData = data.includes(',') ? data.split(',')[1] : data
       if (!cleanData) {
         throw new Error('Invalid base64 data')
       }
+
       const byteCharacters = atob(cleanData)
       const byteNumbers = new Array(byteCharacters.length)
       for (let i = 0; i < byteCharacters.length; i++) {

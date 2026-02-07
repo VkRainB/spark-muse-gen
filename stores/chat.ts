@@ -94,6 +94,12 @@ export const useChatStore = defineStore('chat', {
 
     setContextCount(count: number) {
       this.contextCount = Math.max(1, Math.min(50, count))
+    },
+
+    clearAllSessions() {
+      this.sessions = []
+      this.messages = []
+      this.currentSessionId = null
     }
   },
 

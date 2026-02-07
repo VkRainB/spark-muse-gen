@@ -1,9 +1,12 @@
+import type { Message } from './chat'
+
 // 图像生成选项
 export interface ImageGenerationOptions {
   prompt: string              // 提示词
   resolution: '1K' | '2K' | '4K'  // 分辨率
   aspectRatio: string         // 长宽比
   referenceImage?: string     // 参考图（可选）
+  contextMessages?: Message[] // 上下文消息（可选）
   batchSize?: number          // 批量数量（可选）
   stream?: boolean            // 是否流式传输（可选）
 }

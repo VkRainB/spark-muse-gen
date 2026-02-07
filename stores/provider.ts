@@ -1,6 +1,27 @@
 import { defineStore } from 'pinia'
 import type { Provider, ProviderFormData } from '../types/provider'
 
+const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
+
+const resolveOpenAIModelsUrl = (baseUrl: string) => {
+  const normalized = normalizeBaseUrl(baseUrl)
+  if (!normalized) return '/v1/models'
+  if (/\/chat\/completions$/i.test(normalized)) {
+    return normalized.replace(/\/chat\/completions$/i, '/models')
+  }
+  if (/\/models$/i.test(normalized)) return normalized
+  if (/\/v\d+$/i.test(normalized)) return `${normalized}/models`
+  return `${normalized}/v1/models`
+}
+
+const resolveOpenAIChatCompletionsUrl = (baseUrl: string) => {
+  const normalized = normalizeBaseUrl(baseUrl)
+  if (!normalized) return '/v1/chat/completions'
+  if (/\/chat\/completions$/i.test(normalized)) return normalized
+  if (/\/v\d+$/i.test(normalized)) return `${normalized}/chat/completions`
+  return `${normalized}/v1/chat/completions`
+}
+
 export const useProviderStore = defineStore('provider', {
   state: () => ({
     providers: [] as Provider[]
@@ -66,17 +87,38 @@ export const useProviderStore = defineStore('provider', {
       if (!provider) return false
 
       try {
-        const url = provider.type === 'gemini'
-          ? `${provider.baseUrl}/v1beta/models?key=${provider.apiKey}`
-          : `${provider.baseUrl}/models`
-
         const headers: Record<string, string> = {}
         if (provider.type === 'openai') {
           headers['Authorization'] = `Bearer ${provider.apiKey}`
         }
 
-        const response = await fetch(url, { headers })
-        return response.ok
+        if (provider.type === 'gemini') {
+          const url = `${provider.baseUrl}/v1beta/models?key=${provider.apiKey}`
+          const response = await fetch(url, { headers })
+          return response.ok
+        }
+
+        const modelsResponse = await fetch(resolveOpenAIModelsUrl(provider.baseUrl), { headers })
+        if (modelsResponse.ok) {
+          return true
+        }
+
+        // 部分 OpenAI 兼容服务不提供 /models，回退到 chat/completions 连通性测试
+        const completionResponse = await fetch(resolveOpenAIChatCompletionsUrl(provider.baseUrl), {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: provider.model,
+            messages: [{ role: 'user', content: '连接测试' }],
+            max_tokens: 1,
+            stream: false
+          })
+        })
+
+        return completionResponse.ok
       } catch {
         return false
       }

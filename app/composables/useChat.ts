@@ -45,6 +45,11 @@ export function useChat() {
     toast.info('消息已清空')
   }
 
+  const clearAllSessions = () => {
+    store.clearAllSessions()
+    toast.info('所有会话已清空')
+  }
+
   return {
     sessions: computed(() => store.sessions),
     currentSession: computed(() => store.currentSession),
@@ -63,6 +68,7 @@ export function useChat() {
     clearMessages,
 
     setContextCount: store.setContextCount,
-    ensureSession
+    ensureSession,
+    clearAllSessions
   }
 }

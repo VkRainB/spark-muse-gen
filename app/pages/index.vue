@@ -1,92 +1,130 @@
 <script setup lang="ts">
-const chat = useChat()
-const { isGenerating } = useImageGeneration()
+const chat = useChat();
 
-const messageListRef = ref<{ scrollToBottom: () => void }>()
+const messageListRef = ref<{ scrollToBottom: () => void }>();
 
 // 监听消息变化，自动滚动
-watch(() => chat.currentMessages.value.length, () => {
-  messageListRef.value?.scrollToBottom()
-})
+watch(
+  () => chat.currentMessages.value.length,
+  () => {
+    nextTick(() => {
+      messageListRef.value?.scrollToBottom();
+    });
+  },
+);
 </script>
 
 <template>
-  <div class="flex h-[calc(100vh-8rem)] gap-4">
-    <!-- 左侧边栏: 会话列表 -->
-    <div class="w-64 flex-shrink-0 hidden lg:block">
-      <div class="h-full border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden flex flex-col">
-        <div class="p-4 border-b dark:border-gray-700 flex justify-between items-center">
-          <h3 class="font-semibold">会话</h3>
-          <UButton icon="i-heroicons-plus" size="xs" variant="ghost" @click="chat.createSession()" />
-        </div>
-
-        <div class="flex-1 overflow-y-auto p-2 space-y-1">
-          <div
-            v-for="session in chat.sessions.value"
-            :key="session.id"
-            @click="chat.switchSession(session.id)"
-            :class="[
-              'p-3 rounded-lg cursor-pointer transition group',
-              session.id === chat.currentSession.value?.id
-                ? 'bg-primary/10 text-primary'
-                : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-            ]"
-          >
-            <div class="flex justify-between items-start">
-              <p class="font-medium truncate flex-1">{{ session.title }}</p>
-              <UButton
-                icon="i-heroicons-trash"
-                size="xs"
-                color="error"
-                variant="ghost"
-                class="opacity-0 group-hover:opacity-100"
-                @click.stop="chat.deleteSession(session.id)"
-              />
-            </div>
-            <p class="text-xs text-gray-500 mt-1">
-              {{ new Date(session.updatedAt).toLocaleDateString() }}
-            </p>
-          </div>
-        </div>
+  <div class="chat-page">
+    <!-- 聊天容器 -->
+    <div class="chat-container" id="chat-history">
+      <!-- 空状态 -->
+      <div
+        v-if="chat.currentMessages.value.length === 0"
+        class="empty-state"
+        id="empty-state"
+      >
+        <svg
+          class="google-logo-svg"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 48 48"
+        >
+          <path
+            fill="#EA4335"
+            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
+          />
+          <path
+            fill="#4285F4"
+            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
+          />
+          <path
+            fill="#FBBC05"
+            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
+          />
+          <path
+            fill="#34A853"
+            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
+          />
+        </svg>
+        <h1>gemini-3-pro-image-preview</h1>
+        <p>并发生成 · 4K 渲染 · 本地存储</p>
       </div>
-    </div>
 
-    <!-- 中间: 聊天和生成区域 -->
-    <div class="flex-1 flex flex-col border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
       <!-- 消息列表 -->
       <ChatMessageList
+        v-else
         ref="messageListRef"
         :messages="chat.currentMessages.value"
-        class="flex-1"
-        @copy="() => {}"
+        class="messages-area"
         @delete="chat.deleteMessage"
-        @regenerate="() => {}"
       />
-
-      <!-- 生成区域 -->
-      <div class="border-t dark:border-gray-700">
-        <ImageGenerator class="p-4" />
-      </div>
     </div>
 
-    <!-- 右侧边栏: 工具面板 -->
-    <div class="w-80 flex-shrink-0 hidden xl:block">
-      <div class="h-full border rounded-lg dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto">
-        <div class="p-4 border-b dark:border-gray-700">
-          <h3 class="font-semibold">工具</h3>
-        </div>
-
-        <div class="p-4 space-y-6">
-          <!-- Banana 提示词 -->
-          <ToolsBananaTool @apply="() => {}" />
-
-          <!-- 切片工具 -->
-          <ToolsSlicerTool />
-
-          <!-- 表情包 -->
-          <ToolsStickerMode />
-        </div>
-      </div>
-    </div>
+    <!-- 输入区域 -->
+    <ChatInputBar />
   </div>
 </template>
+
+<style scoped>
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  height: 100%;
+  background: var(--bg-color);
+  overflow: hidden;
+  min-height: 0;
+}
+
+.chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (max-width: 768px) {
+  .chat-container {
+    padding: 16px;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  color: var(--text-sub);
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-state h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 16px 0 8px;
+}
+
+.empty-state p {
+  font-size: 14px;
+  color: var(--text-sub);
+  margin: 0;
+}
+
+.google-logo-svg {
+  width: 64px;
+  height: 64px;
+}
+
+.messages-area {
+  flex: 1;
+  max-width: var(--content-max-width, 860px);
+  width: 100%;
+  margin: 0 auto;
+  min-height: 0;
+}
+</style>

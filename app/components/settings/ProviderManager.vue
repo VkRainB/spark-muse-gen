@@ -11,7 +11,7 @@ const formData = ref<ProviderFormData>({
   type: 'gemini',
   baseUrl: 'https://generativelanguage.googleapis.com',
   apiKey: '',
-  model: 'gemini-2.0-flash-exp-image-generation'
+  model: 'gemini-3-pro-image-preview'
 })
 
 const typeOptions = [
@@ -25,7 +25,7 @@ const resetForm = () => {
     type: 'gemini',
     baseUrl: 'https://generativelanguage.googleapis.com',
     apiKey: '',
-    model: 'gemini-2.0-flash-exp-image-generation'
+    model: 'gemini-3-pro-image-preview'
   }
 }
 
@@ -45,10 +45,10 @@ const handleTest = async (id: string) => {
 watch(() => formData.value.type, (type) => {
   if (type === 'gemini') {
     formData.value.baseUrl = 'https://generativelanguage.googleapis.com'
-    formData.value.model = 'gemini-2.0-flash-exp-image-generation'
+    formData.value.model = 'gemini-3-pro-image-preview'
   } else {
-    formData.value.baseUrl = ''
-    formData.value.model = 'dall-e-3'
+    formData.value.baseUrl = 'https://api.openai.com/v1'
+    formData.value.model = 'gemini-3-pro-image-preview'
   }
 })
 </script>
@@ -116,7 +116,7 @@ watch(() => formData.value.type, (type) => {
           </UFormField>
 
           <UFormField label="Base URL" required>
-            <UInput v-model="formData.baseUrl" placeholder="https://..." />
+            <UInput v-model="formData.baseUrl" placeholder="https://api.openai.com/v1 或 https://host/v1/chat/completions" />
           </UFormField>
 
           <UFormField label="API Key" required>
