@@ -6,6 +6,14 @@ const { generateImage, isGenerating, progress, currentTask, cancelGeneration } =
   useImageGeneration();
 const { saveToFileSystem, isEnabled: autoSaveEnabled } = useFileSystem();
 const chat = useChat();
+const inputBridge = useState<{ prompt: string; send: boolean; nonce: number }>(
+  "chat-input-bridge",
+  () => ({
+    prompt: "",
+    send: false,
+    nonce: 0,
+  }),
+);
 
 const emit = defineEmits<{
   generated: [images: Array<{ data: string; mimeType: string }>];
@@ -110,6 +118,22 @@ const fileInputRef = ref<HTMLInputElement>();
 const triggerFileInput = () => {
   fileInputRef.value?.click();
 };
+
+watch(
+  () => inputBridge.value.nonce,
+  async (nonce, previousNonce) => {
+    if (!nonce || nonce === previousNonce) return;
+
+    prompt.value = inputBridge.value.prompt || "";
+    await nextTick();
+    adjustTextareaHeight();
+    textareaRef.value?.focus();
+
+    if (inputBridge.value.send && prompt.value.trim()) {
+      await sendMessage();
+    }
+  },
+);
 </script>
 
 <template>

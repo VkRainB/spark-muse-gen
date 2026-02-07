@@ -1,6 +1,21 @@
 <script setup lang="ts">
 const { isDark, toggleTheme } = useTheme();
 const chat = useChat();
+const route = useRoute();
+
+const bananaToolOpen = ref(false);
+const customPromptToolOpen = ref(false);
+const stickerToolOpen = ref(false);
+const slicerToolOpen = ref(false);
+const chatInputBridge = useState<{
+  prompt: string;
+  send: boolean;
+  nonce: number;
+}>("chat-input-bridge", () => ({
+  prompt: "",
+  send: false,
+  nonce: 0,
+}));
 
 // 侧边栏状态
 const leftSidebarOpen = ref(false);
@@ -49,6 +64,78 @@ const closeAllSidebars = () => {
 // 创建新会话
 const createNewSession = () => {
   chat.createSession();
+};
+
+const closeToolModals = () => {
+  bananaToolOpen.value = false;
+  customPromptToolOpen.value = false;
+  stickerToolOpen.value = false;
+  slicerToolOpen.value = false;
+};
+
+const openToolModal = (tool: "banana" | "custom" | "sticker" | "slicer") => {
+  closeToolModals();
+  closeAllSidebars();
+
+  if (tool === "banana") bananaToolOpen.value = true;
+  if (tool === "custom") customPromptToolOpen.value = true;
+  if (tool === "sticker") stickerToolOpen.value = true;
+  if (tool === "slicer") slicerToolOpen.value = true;
+};
+
+const openXHS = async () => {
+  closeToolModals();
+  closeAllSidebars();
+
+  if (route.path !== "/xhs") {
+    await navigateTo("/xhs");
+  }
+};
+
+const openBananaTool = () => {
+  openToolModal("banana");
+};
+
+const openCustomPromptTool = () => {
+  openToolModal("custom");
+};
+
+const openStickerTool = () => {
+  openToolModal("sticker");
+};
+
+const openSlicerTool = () => {
+  openToolModal("slicer");
+};
+
+const applyPromptToInput = async (prompt: string, sendDirect = false) => {
+  const normalizedPrompt = prompt.trim();
+  if (!normalizedPrompt) return;
+
+  closeToolModals();
+  closeAllSidebars();
+
+  if (route.path !== "/") {
+    await navigateTo("/");
+  }
+
+  chatInputBridge.value = {
+    prompt: normalizedPrompt,
+    send: sendDirect,
+    nonce: Date.now(),
+  };
+};
+
+const handleBananaApply = (prompt: string) => {
+  void applyPromptToInput(prompt, false);
+};
+
+const handleCustomPromptApply = (prompt: string) => {
+  void applyPromptToInput(prompt, false);
+};
+
+const handleCustomPromptSend = (prompt: string) => {
+  void applyPromptToInput(prompt, true);
 };
 
 // 提供给子组件的控制方法
@@ -129,7 +216,14 @@ provide("rightSidebarOpen", rightSidebarOpen);
       class="sidebar-nav"
       :class="{ open: leftSidebarOpen, collapsed: leftSidebarCollapsed }"
     >
-      <UiSidebarNav :collapsed="leftSidebarCollapsed" />
+      <UiSidebarNav
+        :collapsed="leftSidebarCollapsed"
+        @open-xhs="openXHS"
+        @open-banana="openBananaTool"
+        @open-custom-prompt="openCustomPromptTool"
+        @open-sticker="openStickerTool"
+        @open-slicer="openSlicerTool"
+      />
     </nav>
 
     <!-- 主内容区域 -->
@@ -219,6 +313,73 @@ provide("rightSidebarOpen", rightSidebarOpen);
         <SettingsPanel />
       </div>
     </aside>
+
+    <UModal v-model:open="bananaToolOpen">
+      <template #content>
+        <div class="tool-modal">
+          <div class="tool-modal-header">
+            <h3>提示词快查</h3>
+            <button class="tool-close-btn" @click="bananaToolOpen = false">
+              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="tool-modal-body">
+            <ToolsBananaTool @apply="handleBananaApply" />
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="customPromptToolOpen">
+      <template #content>
+        <div class="tool-modal">
+          <div class="tool-modal-header">
+            <h3>我的提示词</h3>
+            <button class="tool-close-btn" @click="customPromptToolOpen = false">
+              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="tool-modal-body">
+            <ToolsCustomPromptTool
+              @apply="handleCustomPromptApply"
+              @send="handleCustomPromptSend"
+            />
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="stickerToolOpen">
+      <template #content>
+        <div class="tool-modal tool-modal-medium">
+          <div class="tool-modal-header">
+            <h3>制作表情包</h3>
+            <button class="tool-close-btn" @click="stickerToolOpen = false">
+              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="tool-modal-body">
+            <ToolsStickerMode />
+          </div>
+        </div>
+      </template>
+    </UModal>
+
+    <UModal v-model:open="slicerToolOpen">
+      <template #content>
+        <div class="tool-modal tool-modal-medium">
+          <div class="tool-modal-header">
+            <h3>图片切片</h3>
+            <button class="tool-close-btn" @click="slicerToolOpen = false">
+              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+            </button>
+          </div>
+          <div class="tool-modal-body">
+            <ToolsSlicerTool />
+          </div>
+        </div>
+      </template>
+    </UModal>
 
     <!-- UI 组件 -->
     <UNotifications />
@@ -500,6 +661,60 @@ provide("rightSidebarOpen", rightSidebarOpen);
   color: var(--text-main);
 }
 
+.tool-modal {
+  width: min(1120px, calc(100vw - 28px));
+  max-height: min(90vh, 920px);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.tool-modal-medium {
+  width: min(980px, calc(100vw - 28px));
+}
+
+.tool-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.tool-modal-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.tool-close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--text-sub);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tool-close-btn:hover {
+  background: var(--hover-color);
+  color: var(--text-main);
+}
+
+.tool-modal-body {
+  padding: 14px;
+  overflow: auto;
+}
+
 /* 滚动条样式 */
 .sidebar-nav::-webkit-scrollbar,
 .settings-sidebar::-webkit-scrollbar {
@@ -520,5 +735,18 @@ provide("rightSidebarOpen", rightSidebarOpen);
 .sidebar-nav::-webkit-scrollbar-thumb:hover,
 .settings-sidebar::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
+}
+
+@media (max-width: 768px) {
+  .tool-modal,
+  .tool-modal-medium {
+    width: min(100vw - 16px, 100%);
+    max-height: min(92vh, 100%);
+    border-radius: 12px;
+  }
+
+  .tool-modal-body {
+    padding: 10px;
+  }
 }
 </style>

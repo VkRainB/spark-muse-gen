@@ -22,6 +22,10 @@ const {
 const topicInput = ref('')
 const toast = useAppToast()
 
+const goChatHome = async () => {
+  await navigateTo('/')
+}
+
 const handleGenerate = async () => {
   await generateContent(topicInput.value)
 }
@@ -49,7 +53,17 @@ const handleGenerateStoryboard = async (item: StoryboardItem) => {
 
 <template>
   <div class="min-h-screen p-6">
-    <h1 class="text-2xl font-bold mb-6">小红书灵感实验室</h1>
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <h1 class="text-2xl font-bold">小红书灵感实验室</h1>
+      <UButton
+        icon="i-heroicons-arrow-left"
+        color="neutral"
+        variant="outline"
+        @click="goChatHome"
+      >
+        返回聊天
+      </UButton>
+    </div>
 
     <div class="grid grid-cols-12 gap-6">
       <!-- 左侧: 设置和历史 -->

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const chat = useChat();
+const route = useRoute();
 const props = withDefaults(
   defineProps<{
     collapsed?: boolean;
@@ -26,6 +27,14 @@ const emit = defineEmits<{
 // 创建新会话
 const createNewSession = () => {
   chat.createSession();
+};
+
+const switchSessionAndGoChat = async (id: string) => {
+  chat.switchSession(id);
+
+  if (route.path !== "/") {
+    await navigateTo("/");
+  }
 };
 
 // 打开清空确认框
@@ -152,7 +161,7 @@ const closeSessionDrawer = () => {
 };
 
 const switchSessionFromDrawer = (id: string) => {
-  chat.switchSession(id);
+  void switchSessionAndGoChat(id);
   closeSessionDrawer();
 };
 
@@ -248,7 +257,7 @@ onUnmounted(() => {
         :key="session.id"
         class="session-item"
         :class="{ active: session.id === chat.currentSession.value?.id }"
-        @click="chat.switchSession(session.id)"
+        @click="switchSessionAndGoChat(session.id)"
       >
         <span class="session-title">{{ session.title }}</span>
         <button
