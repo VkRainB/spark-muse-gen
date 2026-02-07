@@ -34,6 +34,10 @@ export function useProvider() {
     return success
   }
 
+  const fetchOpenAIModels = async (baseUrl: string, apiKey: string) => {
+    return store.fetchOpenAIModels(baseUrl, apiKey)
+  }
+
   return {
     providers: computed(() => store.providers),
     enabledProviders: computed(() => store.enabledProviders),
@@ -43,6 +47,7 @@ export function useProvider() {
     removeProvider,
     toggleProvider: store.toggleProvider,
     getRandomProvider: store.getRandomProvider,
-    testProvider
+    testProvider,
+    fetchOpenAIModels
   }
 }

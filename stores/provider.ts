@@ -22,6 +22,16 @@ const resolveOpenAIChatCompletionsUrl = (baseUrl: string) => {
   return `${normalized}/v1/chat/completions`
 }
 
+interface OpenAIModelsResponse {
+  data?: Array<{
+    id?: string
+  }>
+  error?: {
+    message?: string
+  }
+  message?: string
+}
+
 export const useProviderStore = defineStore('provider', {
   state: () => ({
     providers: [] as Provider[]
@@ -122,6 +132,33 @@ export const useProviderStore = defineStore('provider', {
       } catch {
         return false
       }
+    },
+
+    async fetchOpenAIModels(baseUrl: string, apiKey: string): Promise<string[]> {
+      const headers: Record<string, string> = {}
+      if (apiKey.trim()) {
+        headers.Authorization = `Bearer ${apiKey.trim()}`
+      }
+
+      const response = await fetch(resolveOpenAIModelsUrl(baseUrl), { headers })
+      const text = await response.text().catch(() => '')
+
+      let payload: OpenAIModelsResponse = {}
+      try {
+        payload = JSON.parse(text) as OpenAIModelsResponse
+      } catch {
+        payload = {}
+      }
+
+      if (!response.ok) {
+        throw new Error(payload.error?.message || payload.message || text || `请求失败: ${response.status}`)
+      }
+
+      const modelIds = (payload.data || [])
+        .map((item) => item.id?.trim() || '')
+        .filter((id): id is string => Boolean(id))
+
+      return [...new Set(modelIds)]
     }
   },
 
