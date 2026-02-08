@@ -25,8 +25,12 @@ const emit = defineEmits<{
 }>();
 
 // 创建新会话
-const createNewSession = () => {
+const createNewSession = async () => {
   chat.createSession();
+
+  if (route.path !== "/") {
+    await navigateTo("/");
+  }
 };
 
 const switchSessionAndGoChat = async (id: string) => {

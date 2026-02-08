@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>悬浮轮盘菜单 (Scroll Control)</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        :root {
+            --ios-blue: #007AFF;
+            --ios-red: #FF3B30;
+            --ios-dark: rgba(28, 28, 30, 0.95);
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.5);
+            
+            --knob-size: 60px;
+            --menu-radius: 120px;
+            --item-size: 56px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none; 
+        }
+
+        body {
+            height: 100vh;
+            width: 100vw;
+            background: linear-gradient(180deg, #F2F2F7 0%, #E5E5EA 100%);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        /* --- 全屏遮罩背景 --- */
+        #menu-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            z-index: 9000;
+        }
+        
+        body.menu-active #menu-backdrop {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* --- 核心容器 --- */
+        #float-container {
+            position: fixed;
+            left: calc(50% - var(--knob-size)/2);
+            top: calc(75% - var(--knob-size)/2);
+            width: var(--knob-size);
+            height: var(--knob-size);
+            z-index: 9999;
+            user-select: none;
+        }
+
+        /* --- 轮盘底座 --- */
+        .wheel-bg-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: calc(var(--menu-radius) * 2.4);
+            height: calc(var(--menu-radius) * 2.4);
+            transform: translate(-50%, -50%) scale(0);
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.2);
+            pointer-events: none;
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            z-index: 0;
+        }
+        
+        #float-container.active .wheel-bg-circle {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* --- 菜单项 --- */
+        .wheel-menu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            z-index: 10;
+        }
+
+        .menu-item {
+            position: absolute;
+            width: var(--item-size);
+            height: var(--item-size);
+            margin-left: calc(var(--item-size) / -2);
+            margin-top: calc(var(--item-size) / -2);
+            border-radius: 50%;
+            
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--ios-blue);
+            
+            /* 固定位置 */
+            transform: scale(0); 
+            opacity: 0;
+            transition: opacity 0.3s ease, background 0.2s, box-shadow 0.2s, border 0.2s;
+            
+            cursor: pointer;
+        }
+
+        #float-container.active .menu-item {
+            opacity: 1;
+        }
+
+        .menu-item i {
+            font-size: 26px;
+            pointer-events: none;
+            transition: transform 0.2s;
+        }
+
+        /* --- 炫彩高亮动画 --- */
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        @keyframes glow-pulse {
+            0% { box-shadow: 0 0 15px rgba(50, 200, 255, 0.6); }
+            50% { box-shadow: 0 0 35px rgba(50, 200, 255, 0.9), 0 0 10px rgba(255, 255, 255, 0.8); }
+            100% { box-shadow: 0 0 15px rgba(50, 200, 255, 0.6); }
+        }
+
+        /* 选中态：固定位置，仅变色发光 */
+        .menu-item.hover-active {
+            background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%);
+            background-size: 200% 200%;
+            animation: gradient-flow 2s ease infinite, glow-pulse 1.5s infinite;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.95);
+            z-index: 20;
+        }
+
+        .menu-item.hover-active i {
+            transform: scale(1.1); 
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+        }
+
+        .menu-item[data-label="退出"].hover-active {
+            background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%);
+            animation: gradient-flow 2s ease infinite;
+            box-shadow: 0 0 30px rgba(255, 75, 43, 0.6);
+        }
+
+        .menu-label {
+            position: absolute;
+            top: 100%;
+            margin-top: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            color: rgba(255,255,255,0.95);
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            padding: 4px 10px;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        
+        #float-container.active .menu-label {
+            opacity: 0; 
+        }
+        
+        .menu-item.hover-active .menu-label {
+            opacity: 1;
+            transform: translateY(5px);
+        }
+
+        /* --- 中心按钮 --- */
+        .knob {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--ios-dark);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.25);
+            position: relative;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        #float-container.active .knob {
+            transform: scale(0.9); 
+            background: rgba(0,0,0,0.8);
+            border: 1px solid rgba(255,255,255,0.2);
+            /* 激活时改为指针手势，暗示可点击确认 */
+            cursor: pointer; 
+        }
+
+        .knob i {
+            font-size: 28px;
+            transition: transform 0.3s;
+        }
+        
+        #float-container.active .knob i {
+            transform: rotate(45deg); /* 默认旋转为X */
+        }
+
+        /* 仅在 has-selection (滚轮选中) 时，中心按钮才变成蓝色对钩 */
+        #float-container.active.has-selection .knob {
+            background: var(--ios-blue);
+            border-color: transparent;
+            box-shadow: 0 0 20px rgba(0,122,255,0.4);
+        }
+        #float-container.active.has-selection .knob i {
+            transform: rotate(0deg); /* 旋转回正 */
+        }
+
+        .demo-bg {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #86868b;
+            z-index: 0;
+            pointer-events: none;
+            width: 90%;
+        }
+        .demo-bg h1 { font-size: 24px; color: #1d1d1f; margin-bottom: 10px; }
+        .demo-bg p { font-size: 15px; line-height: 1.6; }
+
+    </style>
+</head>
+<body>
+
+    <div id="menu-backdrop"></div>
+
+    <div class="demo-bg">
+        <h1>混合交互演示</h1>
+        <p>1. <b>滚轮滚动</b>：中心变对钩 (点击中心确认)<br>2. <b>鼠标悬停</b>：中心保持关闭 (点击中心关闭)</p>
+    </div>
+
+    <div id="float-container">
+        <div class="wheel-bg-circle"></div>
+        
+        <div class="wheel-menu" id="wheel-menu">
+            <div class="menu-item" data-label="返回"><i class="ri-arrow-go-back-line"></i><span class="menu-label">返回</span></div>
+            <div class="menu-item" data-label="搜索"><i class="ri-search-2-line"></i><span class="menu-label">搜索</span></div>
+            <div class="menu-item" data-label="消息"><i class="ri-message-3-line"></i><span class="menu-label">消息</span></div>
+            <div class="menu-item" data-label="主页"><i class="ri-home-5-fill"></i><span class="menu-label">主页</span></div>
+            <div class="menu-item" data-label="退出"><i class="ri-logout-box-r-line"></i><span class="menu-label">退出</span></div>
+        </div>
+
+        <div class="knob" id="knob">
+            <i class="ri-add-line" id="knob-icon"></i>
+        </div>
+    </div>
+
+    <script>
+        const container = document.getElementById('float-container');
+        const knob = document.getElementById('knob');
+        const knobIcon = document.getElementById('knob-icon');
+        const menuItems = document.querySelectorAll('.menu-item');
+        const backdrop = document.getElementById('menu-backdrop');
+        
+        const radius = 120;
+        
+        // 状态变量
+        let isDragging = false;
+        let hasMoved = false;
+        let startX, startY, initialLeft, initialTop;
+        
+        let activeItemIndex = -1; 
+        let isScrollActive = false; // 新增：标记是否处于滚轮选择模式
+        
+        // 滚轮节流
+        let lastScrollTime = 0;
+        const scrollThreshold = 50; 
+
+        // 计算布局
+        const totalItems = menuItems.length;
+        const angleStep = 360 / totalItems;
+
+        function updateMenuPositions() {
+            const isActive = container.classList.contains('active');
+            
+            if (isActive) document.body.classList.add('menu-active');
+            else document.body.classList.remove('menu-active');
+
+            menuItems.forEach((item, index) => {
+                const degrees = (angleStep * index - 90);
+                const radians = degrees * (Math.PI / 180); 
+                
+                item.style.transition = isActive ? 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'transform 0.3s ease';
+
+                if (isActive) {
+                    const x = Math.cos(radians) * radius;
+                    const y = Math.sin(radians) * radius;
+                    
+                    item.style.transitionDelay = `${index * 0.03}s`;
+                    item.style.transform = `translate(${x}px, ${y}px) scale(1)`;
+                    item.style.opacity = '1';
+                } else {
+                    item.style.transitionDelay = '0s';
+                    item.style.transform = `translate(0px, 0px) scale(0.3)`;
+                    item.style.opacity = '0';
+                }
+            });
+            
+            if (!isActive) {
+                updateHighlight(-1);
+            }
+        }
+
+        // --- 核心：高亮逻辑 ---
+        function updateHighlight(index) {
+            activeItemIndex = index;
+            
+            // 1. 无论滚轮还是悬停，菜单项本身都会高亮
+            menuItems.forEach((item, i) => {
+                if (i === index) item.classList.add('hover-active');
+                else item.classList.remove('hover-active');
+            });
+
+            // 2. 只有滚轮模式下，中心按钮才变成对钩
+            if (index !== -1 && isScrollActive) {
+                container.classList.add('has-selection');
+                knobIcon.className = "ri-check-line"; 
+            } else {
+                // 悬停模式或无选择时，保持为关闭(X)样式
+                container.classList.remove('has-selection');
+                knobIcon.className = "ri-add-line"; 
+            }
+        }
+
+        // --- 滚轮事件 (激活对钩) ---
+        window.addEventListener('wheel', (e) => {
+            if (!container.classList.contains('active')) return;
+            
+            const now = Date.now();
+            if (now - lastScrollTime < scrollThreshold) return;
+            lastScrollTime = now;
+
+            // 标记为滚轮模式
+            isScrollActive = true; 
+
+            const direction = e.deltaY > 0 ? 1 : -1;
+            
+            if (activeItemIndex === -1) {
+                if (direction > 0) activeItemIndex = 0;
+                else activeItemIndex = totalItems - 1;
+            } else {
+                if (direction > 0) {
+                    activeItemIndex = (activeItemIndex + 1) % totalItems;
+                } else {
+                    activeItemIndex = (activeItemIndex - 1 + totalItems) % totalItems;
+                }
+            }
+            
+            updateHighlight(activeItemIndex);
+            
+            if (navigator.vibrate) navigator.vibrate(5);
+            
+        }, { passive: false });
+
+        // --- 悬停事件 (禁用对钩) ---
+        menuItems.forEach((item, index) => {
+            item.addEventListener('mouseenter', () => {
+                // 标记退出滚轮模式
+                isScrollActive = false;
+                // 更新高亮 (这会把中心按钮重置为 X)
+                updateHighlight(index);
+            });
+            
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                triggerAction(item);
+            });
+        });
+
+        // --- 拖拽逻辑 ---
+        function handleStart(clientX, clientY) {
+            if (container.classList.contains('active')) return;
+
+            isDragging = true;
+            hasMoved = false;
+            startX = clientX;
+            startY = clientY;
+            
+            const rect = container.getBoundingClientRect();
+            initialLeft = rect.left;
+            initialTop = rect.top;
+            
+            knob.style.cursor = 'grabbing';
+        }
+
+        function handleMove(clientX, clientY) {
+            if (!isDragging) return;
+
+            const deltaX = clientX - startX;
+            const deltaY = clientY - startY;
+            
+            if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) hasMoved = true;
+
+            let newLeft = initialLeft + deltaX;
+            let newTop = initialTop + deltaY;
+            
+            const maxLeft = window.innerWidth - container.offsetWidth;
+            const maxTop = window.innerHeight - container.offsetHeight;
+            newLeft = Math.max(-20, Math.min(newLeft, maxLeft + 20));
+            newTop = Math.max(-20, Math.min(newTop, maxTop + 20));
+
+            container.style.left = `${newLeft}px`;
+            container.style.top = `${newTop}px`;
+        }
+
+        function handleEnd() {
+            if (!isDragging) return;
+            isDragging = false;
+            knob.style.cursor = 'grab';
+            boundarySnap();
+        }
+
+        function boundarySnap() {
+            const rect = container.getBoundingClientRect();
+            const maxLeft = window.innerWidth - rect.width;
+            const maxTop = window.innerHeight - rect.height;
+            
+            let finalLeft = parseInt(container.style.left);
+            let finalTop = parseInt(container.style.top);
+            
+            if (finalLeft < 0) finalLeft = 10;
+            if (finalLeft > maxLeft) finalLeft = maxLeft - 10;
+            if (finalTop < 0) finalTop = 10;
+            if (finalTop > maxTop) finalTop = maxTop - 10;
+            
+            container.style.transition = 'left 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), top 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)';
+            container.style.left = `${finalLeft}px`;
+            container.style.top = `${finalTop}px`;
+            setTimeout(() => { container.style.transition = ''; }, 300);
+        }
+
+        function triggerAction(item) {
+            const label = item.getAttribute('data-label');
+            item.style.filter = 'brightness(1.8)';
+            setTimeout(() => {
+                item.style.filter = '';
+                alert(`执行操作: ${label}`);
+                container.classList.remove('active');
+                updateMenuPositions();
+            }, 100);
+        }
+
+        // --- 事件监听 ---
+        window.addEventListener('mousedown', (e) => {
+            if (e.target.closest('#knob')) {
+                handleStart(e.clientX, e.clientY);
+            }
+        });
+        window.addEventListener('mousemove', (e) => handleMove(e.clientX, e.clientY));
+        window.addEventListener('mouseup', handleEnd);
+
+        window.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            if (e.target.closest('#knob')) {
+                handleStart(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+        
+        window.addEventListener('touchmove', (e) => {
+            if(isDragging) e.preventDefault();
+            const touch = e.touches[0];
+            handleMove(touch.clientX, touch.clientY);
+        }, { passive: false });
+        
+        window.addEventListener('touchend', handleEnd);
+
+        // --- 点击交互逻辑 (核心修改) ---
+        knob.addEventListener('click', () => {
+            if (hasMoved) return; 
+            
+            if (container.classList.contains('active')) {
+                // 如果处于滚轮模式且有选中项，点击中心 = 确认
+                if (activeItemIndex !== -1 && isScrollActive) {
+                    triggerAction(menuItems[activeItemIndex]);
+                } else {
+                    // 否则 (悬停模式或无选择)，点击中心 = 关闭
+                    container.classList.remove('active');
+                    updateMenuPositions();
+                }
+            } else {
+                // 打开菜单
+                container.classList.add('active');
+                updateMenuPositions();
+            }
+        });
+
+        backdrop.addEventListener('click', () => {
+            container.classList.remove('active');
+            updateMenuPositions();
+        });
+
+        updateMenuPositions();
+    </script>
+</body>
+</html>

@@ -1,0 +1,1594 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gemini Pro Workflow UI</title>
+        <!-- 引入 Inter 字体 -->
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap"
+            rel="stylesheet"
+        />
+
+        <!-- 引入 Lucide 图标库 -->
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <!-- 引入 Markdown 解析库 -->
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+        <style>
+            :root {
+                /* 核心色板 */
+                --bg-body: #f8fafc;
+                --bg-sidebar: #ffffff;
+                --bg-input-area: #e2e8f0;
+
+                /* 绿色主色调 */
+                --primary-color: #10b981;
+                --primary-hover: #059669;
+
+                /* 辅助色 */
+                --accent-blue: #3b82f6;
+                --accent-blue-bg: #eff6ff;
+                --accent-purple: #8b5cf6;
+
+                /* 文本色 */
+                --text-main: #1e293b;
+                --text-secondary: #64748b;
+                --text-tertiary: #94a3b8;
+
+                --border-color: #e2e8f0;
+
+                --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+                --shadow-float:
+                    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+                    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+                --shadow-popup:
+                    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+                    0 10px 10px -5px rgba(0, 0, 0, 0.04);
+
+                --radius-md: 8px;
+                --radius-lg: 12px;
+
+                --header-height: 60px;
+                --right-sidebar-width: 320px;
+                --left-sidebar-width: 270px; /* 稍微加宽以适应卡片布局 */
+                --left-sidebar-collapsed-width: 68px;
+            }
+
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+
+            body {
+                font-family:
+                    "Inter",
+                    -apple-system,
+                    BlinkMacSystemFont,
+                    sans-serif;
+                color: var(--text-main);
+                background-color: var(--bg-body);
+                height: 100vh;
+                display: flex;
+                overflow: hidden;
+                font-size: 14px;
+            }
+
+            /* --- 1. 左侧导航栏 --- */
+            .sidebar-left {
+                width: var(--left-sidebar-width);
+                background-color: var(--bg-sidebar);
+                border-right: 1px solid var(--border-color);
+                display: flex;
+                flex-direction: column;
+                padding: 16px;
+                flex-shrink: 0;
+                z-index: 20;
+                position: relative;
+                transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                gap: 12px;
+                overflow-y: auto; /* 允许侧边栏本身滚动 */
+                overflow-x: hidden;
+            }
+            /* 隐藏滚动条但保留功能 */
+            .sidebar-left::-webkit-scrollbar {
+                width: 0;
+            }
+
+            .sidebar-left.collapsed {
+                width: var(--left-sidebar-collapsed-width);
+                padding: 16px 10px;
+            }
+
+            .sidebar-left.collapsed .app-logo span,
+            .sidebar-left.collapsed .new-chat-btn span,
+            .sidebar-left.collapsed .section-title-text,
+            .sidebar-left.collapsed .tool-info,
+            .sidebar-left.collapsed .prompt-info {
+                display: none;
+                opacity: 0;
+            }
+
+            .sidebar-left.collapsed .app-logo,
+            .sidebar-left.collapsed .new-chat-btn {
+                justify-content: center;
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+            /* 折叠时隐藏工具卡片的主体内容，只显示图标（需要调整布局） */
+            .sidebar-left.collapsed .tool-card {
+                padding: 10px;
+                justify-content: center;
+            }
+            .sidebar-left.collapsed .tool-card .tool-icon-box {
+                margin-right: 0;
+            }
+
+            /* 折叠时隐藏历史列表和Prompt列表，只显示Footer逻辑 */
+            .sidebar-left.collapsed .history-list-container,
+            .sidebar-left.collapsed .creation-tools-section,
+            .sidebar-left.collapsed .prompt-section {
+                display: none;
+            }
+
+            .sidebar-toggle-btn {
+                position: absolute;
+                top: 50%;
+                right: -12px;
+                width: 24px;
+                height: 24px;
+                background: white;
+                border: 1px solid var(--border-color);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                color: var(--text-secondary);
+                box-shadow: var(--shadow-sm);
+                z-index: 30;
+                opacity: 0;
+                transition: all 0.2s;
+                transform: translateY(-50%);
+            }
+            .sidebar-left:hover .sidebar-toggle-btn {
+                opacity: 1;
+            }
+            .sidebar-left.collapsed .sidebar-toggle-btn {
+                transform: translateY(-50%) rotate(180deg);
+                opacity: 1;
+            }
+            .sidebar-toggle-btn:hover {
+                color: var(--primary-color);
+                border-color: var(--primary-color);
+            }
+
+            .app-logo {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                padding: 0 4px;
+                margin-bottom: 8px;
+                font-weight: 700;
+                font-size: 16px;
+                color: var(--text-main);
+                white-space: nowrap;
+                overflow: hidden;
+                height: 32px;
+                flex-shrink: 0;
+            }
+            .new-chat-btn {
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                height: 40px;
+                padding: 0 16px;
+                border-radius: var(--radius-md);
+                cursor: pointer;
+                font-weight: 500;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                justify-content: center;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+                white-space: nowrap;
+                overflow: hidden;
+                flex-shrink: 0;
+            }
+            .new-chat-btn:hover {
+                background-color: var(--primary-hover);
+                transform: translateY(-1px);
+            }
+
+            .sidebar-section-title {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                font-weight: 600;
+                margin: 8px 0 8px 4px;
+                text-transform: uppercase;
+                white-space: nowrap;
+            }
+
+            /* 历史记录 */
+            .history-list-container {
+                flex: 1;
+                min-height: 80px; /* 允许压缩 */
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+                overflow-x: hidden;
+            }
+            .history-item {
+                padding: 8px 12px;
+                border-radius: var(--radius-md);
+                color: var(--text-secondary);
+                height: 36px;
+                cursor: pointer;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 14px;
+                flex-shrink: 0;
+            }
+            .history-item:hover {
+                background-color: var(--bg-body);
+                color: var(--text-main);
+            }
+            .history-item.active {
+                background-color: #ecfdf5;
+                color: var(--primary-color);
+                font-weight: 500;
+            }
+
+            /* --- 新增：创作工具区域 --- */
+            .creation-tools-section {
+                flex-shrink: 0;
+                border-top: 1px solid var(--border-color);
+                padding-top: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .tool-card {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 10px;
+                background: white;
+                border: 1px solid var(--border-color);
+                border-radius: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .tool-card:hover {
+                border-color: var(--primary-color);
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+                transform: translateY(-1px);
+            }
+
+            .tool-icon-box {
+                width: 36px;
+                height: 36px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+            /* 图标背景色配置 */
+            .bg-red-light {
+                background: #fee2e2;
+                color: #ef4444;
+            }
+            .bg-yellow-light {
+                background: #fef9c3;
+                color: #eab308;
+            }
+            .bg-purple-light {
+                background: #f3e8ff;
+                color: #a855f7;
+            }
+            .bg-orange-light {
+                background: #ffedd5;
+                color: #f97316;
+            }
+            .bg-blue-light {
+                background: #dbeafe;
+                color: #3b82f6;
+            }
+
+            .tool-info {
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            .tool-title {
+                font-size: 13px;
+                font-weight: 600;
+                color: var(--text-main);
+                margin-bottom: 2px;
+            }
+            .tool-desc {
+                font-size: 11px;
+                color: var(--text-tertiary);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* 提示词库区域 (缩小一点显示) */
+            .prompt-section {
+                flex-shrink: 0;
+                border-top: 1px solid var(--border-color);
+                padding-top: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+            .prompt-card-mini {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                color: var(--text-secondary);
+            }
+            .prompt-card-mini:hover {
+                background: var(--bg-body);
+                color: var(--text-main);
+            }
+            .prompt-icon-mini {
+                width: 14px;
+                height: 14px;
+                opacity: 0.7;
+            }
+            .prompt-title-mini {
+                font-size: 13px;
+            }
+
+            /* Footer */
+            .sidebar-footer {
+                margin-top: auto;
+                display: none;
+                position: relative;
+            }
+            .sidebar-left.collapsed .sidebar-footer {
+                display: block;
+            }
+            .collapsed-history-trigger {
+                width: 44px;
+                height: 44px;
+                border-radius: 12px;
+                border: 1px solid var(--accent-blue);
+                color: var(--accent-blue);
+                background: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                margin: 0 auto;
+                transition: all 0.2s;
+            }
+            .collapsed-history-trigger:hover {
+                background: var(--accent-blue-bg);
+                box-shadow: 0 2px 8px rgba(59, 130, 246, 0.15);
+            }
+            .history-popover {
+                position: absolute;
+                left: 100%;
+                bottom: 0;
+                margin-left: 16px;
+                width: 280px;
+                background: white;
+                border: 1px solid var(--border-color);
+                box-shadow: var(--shadow-popup);
+                border-radius: var(--radius-lg);
+                padding: 16px;
+                opacity: 0;
+                visibility: hidden;
+                transform: translateX(-10px);
+                transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+                z-index: 100;
+            }
+            .sidebar-footer:hover .history-popover {
+                opacity: 1;
+                visibility: visible;
+                transform: translateX(0);
+            }
+
+            /* Popover Styles */
+            .popover-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+            .popover-title {
+                font-weight: 600;
+                font-size: 13px;
+                color: var(--text-secondary);
+            }
+            .popover-clear {
+                font-size: 12px;
+                color: #ef4444;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                padding: 4px 8px;
+                border-radius: 4px;
+                transition: background 0.2s;
+            }
+            .popover-list {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            .popover-item {
+                padding: 10px 12px;
+                border-radius: 8px;
+                background: #f8fafc;
+                border: 1px solid transparent;
+                font-size: 14px;
+                color: var(--text-main);
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .popover-item:hover {
+                background: white;
+                border-color: var(--border-color);
+                box-shadow: var(--shadow-sm);
+            }
+
+            /* --- 2. 主区域 --- */
+            .main-content {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                background-color: #f1f3f5;
+                transition: margin-right 0.3s ease;
+            }
+
+            .top-bar {
+                height: var(--header-height);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0 24px;
+                background: transparent;
+                z-index: 10;
+            }
+
+            .model-selector {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-weight: 600;
+                font-size: 14px;
+                cursor: pointer;
+                padding: 6px 12px;
+                border-radius: var(--radius-md);
+                background: #e2e8f0;
+                color: var(--text-main);
+                transition: all 0.2s;
+            }
+            .model-selector:hover {
+                background: #cbd5e1;
+            }
+
+            /* 右侧操作区 - 只保留配置开关 */
+            .top-actions {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }
+
+            .right-sidebar-toggle {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                border: none;
+                background: transparent;
+                color: var(--text-secondary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+            }
+            .right-sidebar-toggle:hover {
+                background: #e2e8f0;
+                color: var(--text-main);
+            }
+
+            .chat-scroll-area {
+                flex: 1;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                padding: 20px 0 140px 0;
+                scroll-behavior: smooth;
+            }
+            .message-row {
+                display: flex;
+                padding: 20px 40px;
+                gap: 16px;
+                max-width: 900px;
+                margin: 0 auto;
+                width: 100%;
+            }
+            .message-row.ai-message .msg-content {
+                background: white;
+                padding: 20px;
+                border-radius: 0 12px 12px 12px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            }
+            .msg-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 8px;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .user-avatar-icon {
+                background: #cbd5e1;
+                color: white;
+            }
+            .ai-avatar-icon {
+                background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+                color: white;
+            }
+            .msg-content {
+                flex: 1;
+                line-height: 1.6;
+                font-size: 15px;
+                color: var(--text-main);
+            }
+            .msg-content ul {
+                padding-left: 20px;
+                margin: 10px 0;
+            }
+            .msg-content li {
+                margin-bottom: 6px;
+            }
+
+            /* Input Area */
+            .input-wrapper {
+                position: absolute;
+                bottom: 30px;
+                left: 0;
+                right: 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                z-index: 30;
+                padding: 0 20px;
+                pointer-events: none;
+            }
+            .params-popup {
+                background: white;
+                border-radius: var(--radius-lg);
+                padding: 20px;
+                width: 100%;
+                max-width: 760px;
+                margin-bottom: 16px;
+                box-shadow: var(--shadow-popup);
+                pointer-events: auto;
+                opacity: 0;
+                transform: translateY(10px) scale(0.98);
+                visibility: hidden;
+                transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+                position: absolute;
+                bottom: 100%;
+                border: 1px solid white;
+            }
+            .params-popup.open {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                visibility: visible;
+            }
+            .params-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+                font-weight: 600;
+                font-size: 14px;
+            }
+            .ratio-section {
+                margin-bottom: 20px;
+            }
+            .section-label {
+                font-size: 12px;
+                color: var(--text-tertiary);
+                margin-bottom: 10px;
+                display: block;
+            }
+            .ratio-grid {
+                display: flex;
+                gap: 12px;
+            }
+            .ratio-card {
+                flex: 1;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 12px 0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                cursor: pointer;
+                background: white;
+                transition: all 0.2s;
+                height: 72px;
+            }
+            .ratio-card:hover {
+                border-color: var(--text-tertiary);
+            }
+            .ratio-card.active {
+                border-color: var(--accent-blue);
+                background: #eff6ff;
+                color: var(--accent-blue);
+            }
+            .ratio-preview {
+                border: 2px solid currentColor;
+                border-radius: 2px;
+            }
+            .r-1-1 {
+                width: 14px;
+                height: 14px;
+            }
+            .r-4-3 {
+                width: 16px;
+                height: 12px;
+            }
+            .r-3-4 {
+                width: 12px;
+                height: 16px;
+            }
+            .r-16-9 {
+                width: 18px;
+                height: 10px;
+            }
+            .r-9-16 {
+                width: 10px;
+                height: 18px;
+            }
+            .res-options {
+                display: flex;
+                gap: 12px;
+            }
+            .res-btn {
+                flex: 1;
+                padding: 10px;
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                background: white;
+                font-size: 13px;
+                cursor: pointer;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+            .res-btn.active {
+                border-color: var(--accent-blue);
+                background: #eff6ff;
+                color: var(--accent-blue);
+                font-weight: 500;
+            }
+            .custom-res-row {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                margin-top: 12px;
+            }
+            .custom-input {
+                flex: 1;
+                background: #f8fafc;
+                border: 1px solid var(--border-color);
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                outline: none;
+            }
+            .custom-input:focus {
+                border-color: var(--accent-blue);
+                background: white;
+            }
+
+            .input-container {
+                width: 100%;
+                max-width: 760px;
+                background: #e2e8f0;
+                border-radius: 30px;
+                padding: 8px 10px 8px 20px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                pointer-events: auto;
+                position: relative;
+                z-index: 31;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            }
+            .input-container:focus-within {
+                background: white;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            }
+            .chat-input {
+                flex: 1;
+                border: none;
+                outline: none;
+                font-size: 15px;
+                padding: 10px 0;
+                resize: none;
+                max-height: 200px;
+                font-family: inherit;
+                height: 24px;
+                background: transparent;
+                color: var(--text-main);
+            }
+            .left-actions {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                border-right: 1px solid #cbd5e1;
+                padding-right: 12px;
+                margin-right: 4px;
+            }
+            .action-btn {
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+                border: none;
+                background: transparent;
+                color: var(--text-secondary);
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .action-btn:hover {
+                background: white;
+                color: var(--primary-color);
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+                transform: translateY(-1px);
+            }
+            .send-btn {
+                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                color: white;
+                width: 36px;
+                height: 36px;
+                border-radius: 12px;
+                border: none;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: all 0.2s;
+                box-shadow: 0 2px 6px rgba(16, 185, 129, 0.4);
+            }
+            .send-btn:hover {
+                transform: scale(1.05);
+                box-shadow: 0 4px 12px rgba(16, 185, 129, 0.5);
+            }
+
+            /* --- 3. 右侧设置栏 --- */
+            .sidebar-right {
+                width: var(--right-sidebar-width);
+                background-color: var(--bg-sidebar);
+                border-left: 1px solid var(--border-color);
+                display: flex;
+                flex-direction: column;
+                transition: margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                flex-shrink: 0;
+                height: 100vh;
+            }
+            .sidebar-right.collapsed {
+                margin-right: calc(var(--right-sidebar-width) * -1);
+            }
+            .settings-header {
+                padding: 16px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+            .settings-title {
+                font-size: 16px;
+                font-weight: 700;
+                color: var(--text-main);
+            }
+            .settings-content {
+                flex: 1;
+                overflow-y: auto;
+                padding: 0 20px 20px;
+            }
+            .config-group {
+                margin-bottom: 20px;
+                border-bottom: 1px solid var(--bg-body);
+                padding-bottom: 16px;
+            }
+            .config-group:last-child {
+                border-bottom: none;
+            }
+            .config-label-lg {
+                font-size: 14px;
+                font-weight: 700;
+                color: var(--text-main);
+                margin-bottom: 12px;
+                display: block;
+            }
+            .api-section-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 10px;
+            }
+            .add-channel-btn {
+                background-color: var(--primary-color);
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                transition: all 0.2s;
+            }
+            .channel-filter {
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                background: var(--bg-hover);
+                padding: 4px 8px;
+                border-radius: 6px;
+                cursor: pointer;
+            }
+            .channel-filter select {
+                background: transparent;
+                border: none;
+                outline: none;
+                font-size: 12px;
+                color: var(--text-main);
+                cursor: pointer;
+                appearance: none;
+                padding-right: 14px;
+            }
+            .api-card-new {
+                background: white;
+                border: 1px solid var(--border-color);
+                border-radius: 12px;
+                padding: 10px 12px;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                transition: all 0.2s;
+            }
+            .api-card-new.enabled {
+                border: 1px solid #334155;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+            .toggle-switch {
+                width: 36px;
+                height: 20px;
+                background: #e2e8f0;
+                border-radius: 20px;
+                position: relative;
+                cursor: pointer;
+                transition: 0.3s;
+                flex-shrink: 0;
+            }
+            .toggle-switch.on {
+                background: var(--primary-color);
+            }
+            .toggle-knob {
+                width: 16px;
+                height: 16px;
+                background: white;
+                border-radius: 50%;
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                transition: 0.3s;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            }
+            .toggle-switch.on .toggle-knob {
+                transform: translateX(16px);
+            }
+            .theme-switcher-container {
+                background-color: #f1f5f9;
+                padding: 3px;
+                border-radius: 8px;
+                display: flex;
+                gap: 4px;
+            }
+            .theme-btn {
+                flex: 1;
+                border: none;
+                background: transparent;
+                padding: 6px;
+                border-radius: 6px;
+                font-size: 12px;
+                color: var(--text-secondary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            .theme-btn.active {
+                background: white;
+                color: var(--primary-color);
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                font-weight: 500;
+            }
+            .slider-range {
+                -webkit-appearance: none;
+                width: 100%;
+                height: 6px;
+                background: #e2e8f0;
+                border-radius: 4px;
+                outline: none;
+                margin: 0;
+            }
+            .slider-range::-webkit-slider-thumb {
+                -webkit-appearance: none;
+                width: 16px;
+                height: 16px;
+                background: var(--text-secondary);
+                border-radius: 50%;
+                cursor: pointer;
+                transition: background 0.15s ease-in-out;
+                border: 2px solid white;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            }
+            .slider-range::-webkit-slider-thumb:hover {
+                background: var(--text-main);
+            }
+            .outline-btn {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                padding: 8px;
+                border: 1px solid var(--primary-color);
+                color: var(--primary-color);
+                background: white;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-top: 8px;
+            }
+            .outline-btn:hover {
+                background: #ecfdf5;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- 1. 左侧导航 -->
+        <aside class="sidebar-left" id="leftSidebar">
+            <!-- 侧边栏折叠按钮 -->
+            <div
+                class="sidebar-toggle-btn"
+                onclick="toggleLeftSidebar()"
+                title="折叠侧边栏"
+            >
+                <i data-lucide="chevron-left" style="width: 14px"></i>
+            </div>
+
+            <div class="app-logo">
+                <div
+                    style="
+                        width: 28px;
+                        height: 28px;
+                        background: #0f172a;
+                        border-radius: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    "
+                >
+                    <i data-lucide="bot" style="color: white; width: 18px"></i>
+                </div>
+                <span>Gemini Pro</span>
+            </div>
+
+            <button class="new-chat-btn" onclick="location.reload()">
+                <i data-lucide="plus" style="width: 18px"></i>
+                <span>新建对话</span>
+            </button>
+
+            <!-- 历史记录列表 -->
+            <div class="history-list-container">
+                <div class="sidebar-section-title section-title-text">
+                    Recent
+                </div>
+                <div class="history-item active">
+                    <i data-lucide="message-square" style="width: 16px"></i>
+                    <span>UI Redesign V15</span>
+                </div>
+                <div class="history-item">
+                    <i data-lucide="message-square" style="width: 16px"></i>
+                    <span>Creation Tools Added</span>
+                </div>
+            </div>
+
+            <!-- 新增：创作工具区域 -->
+            <div class="creation-tools-section">
+                <div class="sidebar-section-title section-title-text">
+                    创作工具
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon-box bg-red-light">
+                        <i data-lucide="book-open" style="width: 18px"></i>
+                    </div>
+                    <div class="tool-info">
+                        <span class="tool-title">XHS 灵感实验室</span>
+                        <span class="tool-desc">小红书风格内容创作</span>
+                    </div>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon-box bg-yellow-light">
+                        <i data-lucide="coins" style="width: 18px"></i>
+                    </div>
+                    <div class="tool-info">
+                        <span class="tool-title">提示词快查</span>
+                        <span class="tool-desc">快速查找优质提示词</span>
+                    </div>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon-box bg-purple-light">
+                        <i data-lucide="file-text" style="width: 18px"></i>
+                    </div>
+                    <div class="tool-info">
+                        <span class="tool-title">我的提示词</span>
+                        <span class="tool-desc">管理个人提示词库</span>
+                    </div>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon-box bg-orange-light">
+                        <i data-lucide="smile" style="width: 18px"></i>
+                    </div>
+                    <div class="tool-info">
+                        <span class="tool-title">制作表情包</span>
+                        <span class="tool-desc">快速生成表情包</span>
+                    </div>
+                </div>
+
+                <div class="tool-card">
+                    <div class="tool-icon-box bg-blue-light">
+                        <i data-lucide="scissors" style="width: 18px"></i>
+                    </div>
+                    <div class="tool-info">
+                        <span class="tool-title">图片切片</span>
+                        <span class="tool-desc">九宫格切图工具</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 折叠Footer -->
+            <div class="sidebar-footer">
+                <div class="collapsed-history-trigger">
+                    <i data-lucide="clock" style="width: 20px"></i>
+                </div>
+                <div class="history-popover">
+                    <div class="popover-header">
+                        <span class="popover-title">最近会话</span>
+                        <span class="popover-clear"
+                            ><i data-lucide="trash-2" style="width: 12px"></i>
+                            清空</span
+                        >
+                    </div>
+                    <div class="popover-list">
+                        <div class="popover-item active">UI Redesign V15</div>
+                        <div class="popover-item">Creation Tools Added</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 2. 主区域 -->
+        <main class="main-content">
+            <header class="top-bar">
+                <!-- 左侧：模型选择 -->
+                <div class="model-selector">
+                    Gemini 2.5 Flash
+                    <i
+                        data-lucide="chevron-down"
+                        style="width: 14px; opacity: 0.5; margin-left: 6px"
+                    ></i>
+                </div>
+
+                <!-- 右侧：仅保留设置开关 (移除了分享和头像) -->
+                <div class="top-actions">
+                    <button
+                        class="right-sidebar-toggle"
+                        onclick="toggleRightSidebar()"
+                        title="展开/收起配置"
+                    >
+                        <i
+                            data-lucide="panel-right-open"
+                            style="width: 20px"
+                        ></i>
+                    </button>
+                </div>
+            </header>
+
+            <div class="chat-scroll-area" id="chatContainer">
+                <div class="message-row ai-message">
+                    <div class="msg-avatar ai-avatar-icon">
+                        <i data-lucide="sparkles" style="width: 18px"></i>
+                    </div>
+                    <div class="msg-content">
+                        <p><strong>更新说明 (V15)：</strong></p>
+                        <p>已根据您的最新指示完成修改：</p>
+                        <ul>
+                            <li>
+                                <strong>顶部栏净化</strong
+                                >：移除了“分享”按钮和用户头像，界面更纯粹。
+                            </li>
+                            <li>
+                                <strong>新增创作工具</strong
+                                >：在左侧添加了“创作工具”卡片组，包含：
+                                <ul>
+                                    <li>XHS 灵感实验室</li>
+                                    <li>提示词快查</li>
+                                    <li>我的提示词</li>
+                                    <li>制作表情包</li>
+                                    <li>图片切片</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-wrapper">
+                <!-- 绘图参数面板 -->
+                <div class="params-popup" id="paramsPopup">
+                    <div class="params-header">
+                        <span
+                            style="display: flex; align-items: center; gap: 8px"
+                        >
+                            <i data-lucide="image" style="width: 18px"></i>
+                            绘图参数设置
+                        </span>
+                        <i
+                            data-lucide="x"
+                            style="
+                                width: 18px;
+                                cursor: pointer;
+                                color: var(--text-tertiary);
+                            "
+                            onclick="toggleParams()"
+                        ></i>
+                    </div>
+                    <div class="ratio-section">
+                        <span class="section-label">长宽比</span>
+                        <div class="ratio-grid">
+                            <div
+                                class="ratio-card active"
+                                onclick="selectRatio(this)"
+                            >
+                                <div class="ratio-preview r-1-1"></div>
+                                <span>1:1</span>
+                            </div>
+                            <div class="ratio-card" onclick="selectRatio(this)">
+                                <div class="ratio-preview r-4-3"></div>
+                                <span>4:3</span>
+                            </div>
+                            <div class="ratio-card" onclick="selectRatio(this)">
+                                <div class="ratio-preview r-3-4"></div>
+                                <span>3:4</span>
+                            </div>
+                            <div class="ratio-card" onclick="selectRatio(this)">
+                                <div class="ratio-preview r-16-9"></div>
+                                <span>16:9</span>
+                            </div>
+                            <div class="ratio-card" onclick="selectRatio(this)">
+                                <div class="ratio-preview r-9-16"></div>
+                                <span>9:16</span>
+                            </div>
+                            <div class="ratio-card" onclick="selectRatio(this)">
+                                <i
+                                    data-lucide="maximize"
+                                    style="width: 18px"
+                                ></i
+                                ><span>Auto</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ratio-section">
+                        <span class="section-label">分辨率</span>
+                        <div class="res-options">
+                            <button
+                                class="res-btn active"
+                                onclick="selectRes(this, false)"
+                            >
+                                1K
+                            </button>
+                            <button
+                                class="res-btn"
+                                onclick="selectRes(this, false)"
+                            >
+                                2K
+                            </button>
+                            <button
+                                class="res-btn"
+                                onclick="selectRes(this, false)"
+                            >
+                                4K
+                            </button>
+                            <button
+                                class="res-btn"
+                                onclick="selectRes(this, true)"
+                            >
+                                自定义
+                            </button>
+                        </div>
+                        <div
+                            class="custom-res-row"
+                            id="customResInputs"
+                            style="display: none"
+                        >
+                            <input
+                                type="number"
+                                class="custom-input"
+                                placeholder="W"
+                                value="1024"
+                            />
+                            <span style="color: var(--text-tertiary)">×</span>
+                            <input
+                                type="number"
+                                class="custom-input"
+                                placeholder="H"
+                                value="1024"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 输入框主体 -->
+                <div class="input-container">
+                    <div class="left-actions">
+                        <button
+                            class="action-btn"
+                            id="toggleParamsBtn"
+                            onclick="toggleParams()"
+                            title="调整参数"
+                        >
+                            <i
+                                data-lucide="sliders-horizontal"
+                                style="width: 18px"
+                            ></i>
+                        </button>
+                        <button class="action-btn" title="上传附件">
+                            <i data-lucide="paperclip" style="width: 18px"></i>
+                        </button>
+                    </div>
+                    <textarea
+                        class="chat-input"
+                        id="userInput"
+                        placeholder="输入指令..."
+                        rows="1"
+                    ></textarea>
+                    <div
+                        style="display: flex; flex-direction: column; gap: 2px"
+                    >
+                        <i
+                            data-lucide="chevron-up"
+                            style="width: 12px; color: #cbd5e1; cursor: pointer"
+                        ></i>
+                        <i
+                            data-lucide="chevron-down"
+                            style="width: 12px; color: #cbd5e1; cursor: pointer"
+                        ></i>
+                    </div>
+                    <button class="send-btn" id="sendBtn">
+                        <i data-lucide="arrow-up" style="width: 20px"></i>
+                    </button>
+                </div>
+            </div>
+        </main>
+
+        <!-- 3. 右侧配置栏 -->
+        <aside class="sidebar-right" id="rightSidebar">
+            <div class="settings-header">
+                <span class="settings-title">设置</span>
+                <i
+                    data-lucide="x"
+                    style="
+                        width: 18px;
+                        cursor: pointer;
+                        color: var(--text-secondary);
+                    "
+                    onclick="toggleRightSidebar()"
+                ></i>
+            </div>
+
+            <div class="settings-content">
+                <div class="config-group">
+                    <span class="config-label-lg">外观</span>
+                    <div class="theme-switcher-container">
+                        <button class="theme-btn active">
+                            <i data-lucide="sun" style="width: 14px"></i> 浅色
+                        </button>
+                        <button class="theme-btn">
+                            <i data-lucide="moon" style="width: 14px"></i> 深色
+                        </button>
+                        <button class="theme-btn">
+                            <i data-lucide="monitor" style="width: 14px"></i>
+                            跟随
+                        </button>
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <span class="config-label-lg">对话设置</span>
+                    <div
+                        style="
+                            margin-bottom: 6px;
+                            font-size: 12px;
+                            color: var(--text-main);
+                            display: flex;
+                            justify-content: space-between;
+                        "
+                    >
+                        <span>上下文消息数</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px">
+                        <input
+                            type="range"
+                            min="1"
+                            max="20"
+                            value="7"
+                            class="slider-range"
+                            oninput="
+                                document.getElementById(
+                                    'contextCount',
+                                ).innerText = this.value
+                            "
+                        />
+                        <span
+                            id="contextCount"
+                            style="
+                                font-size: 13px;
+                                font-weight: 500;
+                                width: 20px;
+                                text-align: right;
+                                color: var(--text-secondary);
+                            "
+                            >7</span
+                        >
+                    </div>
+                </div>
+
+                <div class="config-group">
+                    <span class="config-label-lg">自动保存</span>
+                    <div
+                        style="
+                            display: flex;
+                            justify-content: space-between;
+                            align-items: center;
+                            margin-bottom: 10px;
+                        "
+                    >
+                        <div>
+                            <div
+                                style="font-size: 12px; color: var(--text-main)"
+                            >
+                                自动保存到本地
+                            </div>
+                            <div
+                                style="
+                                    font-size: 11px;
+                                    color: var(--text-tertiary);
+                                "
+                            >
+                                已禁用
+                            </div>
+                        </div>
+                        <div
+                            class="toggle-switch"
+                            onclick="
+                                this.classList.toggle('on');
+                                updateSaveStatus(this);
+                            "
+                        >
+                            <div class="toggle-knob"></div>
+                        </div>
+                    </div>
+                    <button class="outline-btn">
+                        <i data-lucide="folder-open" style="width: 16px"></i>
+                        选择保存目录
+                    </button>
+                </div>
+
+                <div class="config-group">
+                    <div class="api-section-header">
+                        <div
+                            style="display: flex; align-items: center; gap: 8px"
+                        >
+                            <span class="config-label-lg" style="margin: 0"
+                                >API 渠道</span
+                            >
+                        </div>
+                        <button class="add-channel-btn">
+                            <i data-lucide="plus" style="width: 14px"></i> 添加
+                        </button>
+                    </div>
+                    <div class="api-card-new enabled">
+                        <div
+                            class="toggle-switch on"
+                            onclick="this.classList.toggle('on')"
+                        >
+                            <div class="toggle-knob"></div>
+                        </div>
+                        <div style="flex: 1">
+                            <div style="font-weight: 600; font-size: 13px">
+                                22
+                            </div>
+                            <div
+                                style="
+                                    font-size: 11px;
+                                    color: var(--text-secondary);
+                                "
+                            >
+                                openai · grok-1.0
+                            </div>
+                        </div>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 8px;
+                                color: var(--text-tertiary);
+                            "
+                        >
+                            <i
+                                data-lucide="pencil"
+                                style="width: 14px; cursor: pointer"
+                            ></i>
+                            <i
+                                data-lucide="trash-2"
+                                style="width: 14px; cursor: pointer"
+                            ></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <script type="module">
+            lucide.createIcons();
+
+            const userInput = document.getElementById("userInput");
+            const chatContainer = document.getElementById("chatContainer");
+            const sendBtn = document.getElementById("sendBtn");
+            const rightSidebar = document.getElementById("rightSidebar");
+            const leftSidebar = document.getElementById("leftSidebar");
+            const paramsPopup = document.getElementById("paramsPopup");
+            const toggleParamsBtn = document.getElementById("toggleParamsBtn");
+            const customResInputs = document.getElementById("customResInputs");
+
+            lucide.createIcons();
+
+            // 交互逻辑
+            window.toggleLeftSidebar = () =>
+                leftSidebar.classList.toggle("collapsed");
+
+            window.toggleRightSidebar = () => {
+                const btnIcon = document.querySelector(
+                    ".right-sidebar-toggle i",
+                );
+                rightSidebar.classList.toggle("collapsed");
+                if (rightSidebar.classList.contains("collapsed")) {
+                    btnIcon.outerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-right-close"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m8 9 3 3-3 3"/></svg>`;
+                } else {
+                    btnIcon.outerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-panel-right-open"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M15 3v18"/><path d="m10 15-3-3 3-3"/></svg>`;
+                }
+            };
+
+            window.toggleParams = () => {
+                paramsPopup.classList.toggle("open");
+                toggleParamsBtn.classList.toggle("active");
+            };
+
+            window.selectRatio = (el) => {
+                document
+                    .querySelectorAll(".ratio-card")
+                    .forEach((c) => c.classList.remove("active"));
+                el.classList.add("active");
+            };
+
+            window.selectRes = (el, isCustom) => {
+                document
+                    .querySelectorAll(".res-btn")
+                    .forEach((b) => b.classList.remove("active"));
+                el.classList.add("active");
+                customResInputs.style.display = isCustom ? "flex" : "none";
+            };
+
+            window.updateSaveStatus = (el) => {
+                const statusText = el.parentElement.querySelector(
+                    "div:nth-child(1) div:nth-child(2)",
+                );
+                if (el.classList.contains("on")) {
+                    statusText.innerText = "已启用";
+                    statusText.style.color = "var(--primary-color)";
+                } else {
+                    statusText.innerText = "已禁用";
+                    statusText.style.color = "var(--text-tertiary)";
+                }
+            };
+
+            // 提示词点击逻辑
+            window.usePrompt = (text) => {
+                userInput.value = text;
+                userInput.focus();
+            };
+
+            // 发送消息
+            sendBtn.addEventListener("click", () => {
+                const text = userInput.value.trim();
+                if (!text) return;
+
+                const userDiv = document.createElement("div");
+                userDiv.className = "message-row";
+                userDiv.innerHTML = `<div class="msg-avatar user-avatar-icon"><i data-lucide="user" style="width:16px;"></i></div><div class="msg-content">${text}</div>`;
+                chatContainer.appendChild(userDiv);
+
+                userInput.value = "";
+                paramsPopup.classList.remove("open");
+                toggleParamsBtn.classList.remove("active");
+
+                setTimeout(() => {
+                    const aiDiv = document.createElement("div");
+                    aiDiv.className = "message-row ai-message";
+                    aiDiv.innerHTML = `<div class="msg-avatar ai-avatar-icon"><i data-lucide="bot" style="width:18px;"></i></div><div class="msg-content">这是一个演示回复。<br>您输入了: "${text}"</div>`;
+                    chatContainer.appendChild(aiDiv);
+                    chatContainer.scrollTop = chatContainer.scrollHeight;
+                    lucide.createIcons();
+                }, 600);
+
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+                lucide.createIcons();
+            });
+
+            userInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    sendBtn.click();
+                }
+            });
+        </script>
+    </body>
+</html>

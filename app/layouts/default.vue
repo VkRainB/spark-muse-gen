@@ -62,8 +62,12 @@ const closeAllSidebars = () => {
 };
 
 // 创建新会话
-const createNewSession = () => {
+const createNewSession = async () => {
   chat.createSession();
+
+  if (route.path !== "/") {
+    await navigateTo("/");
+  }
 };
 
 const closeToolModals = () => {
