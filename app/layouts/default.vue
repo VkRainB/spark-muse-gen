@@ -199,11 +199,15 @@ provide("rightSidebarOpen", rightSidebarOpen);
         </button>
         <button
           class="header-icon-btn"
+          :class="{ 'is-active': rightSidebarOpen }"
           @click="toggleSettings"
           title="设置"
           aria-label="设置"
         >
-          <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
+          <UIcon
+            :name="rightSidebarOpen ? 'i-heroicons-cog-6-tooth-solid' : 'i-heroicons-cog-6-tooth'"
+            class="w-5 h-5"
+          />
         </button>
       </div>
     </header>
@@ -231,7 +235,10 @@ provide("rightSidebarOpen", rightSidebarOpen);
     </nav>
 
     <!-- 主内容区域 -->
-    <main class="main-area" :class="{ 'sidebar-collapsed': leftSidebarCollapsed }">
+    <main
+      class="main-area"
+      :class="{ 'sidebar-collapsed': leftSidebarCollapsed, 'settings-open': rightSidebarOpen }"
+    >
       <!-- 桌面端顶部 -->
       <header class="desktop-header">
         <div class="brand-area">
@@ -246,29 +253,10 @@ provide("rightSidebarOpen", rightSidebarOpen);
               class="w-5 h-5"
             />
           </button>
-          <svg
-            class="brand-logo-small"
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 48 48"
-          >
-            <path
-              fill="#EA4335"
-              d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-            />
-            <path
-              fill="#4285F4"
-              d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-            />
-            <path
-              fill="#34A853"
-              d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-            />
-          </svg>
-          <span>Gemini 3 Pro</span>
+          <div class="model-selector" title="当前模型">
+            <span>Gemini 3 Pro Preview</span>
+            <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 opacity-60" />
+          </div>
         </div>
 
         <div class="header-actions">
@@ -293,8 +281,16 @@ provide("rightSidebarOpen", rightSidebarOpen);
               class="w-5 h-5"
             />
           </button>
-          <button class="header-icon-btn" title="设置" @click="toggleSettings">
-            <UIcon name="i-heroicons-cog-6-tooth" class="w-5 h-5" />
+          <button
+            class="header-icon-btn"
+            :class="{ 'is-active': rightSidebarOpen }"
+            title="设置"
+            @click="toggleSettings"
+          >
+            <UIcon
+              :name="rightSidebarOpen ? 'i-heroicons-cog-6-tooth-solid' : 'i-heroicons-cog-6-tooth'"
+              class="w-5 h-5"
+            />
           </button>
         </div>
       </header>
@@ -309,7 +305,7 @@ provide("rightSidebarOpen", rightSidebarOpen);
     <aside class="settings-sidebar" :class="{ open: rightSidebarOpen }">
       <div class="settings-inner">
         <div class="settings-header">
-          <h2>绘图设置</h2>
+          <h2>设置</h2>
           <button class="close-btn" @click="closeAllSidebars">
             <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
           </button>
@@ -392,34 +388,38 @@ provide("rightSidebarOpen", rightSidebarOpen);
 </template>
 
 <style scoped>
-/* 容器布局 */
 .app-container {
+  display: flex;
   min-height: 100vh;
-  background-color: var(--bg-color);
+  background: var(--bg-body);
   color: var(--text-main);
   position: relative;
-  display: flex;
+  overflow: hidden;
 }
 
-/* 移动端头部 */
 .mobile-header {
-  display: none;
+  display: flex;
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
   height: var(--mobile-header-height, 56px);
-  background: var(--bg-secondary);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border-color);
   z-index: 100;
-  padding: 0 8px;
+  padding: 0 10px;
   align-items: center;
   gap: 8px;
 }
 
-@media (max-width: 768px) {
+:deep(.dark) .mobile-header {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+@media (min-width: 769px) {
   .mobile-header {
-    display: flex;
+    display: none;
   }
 }
 
@@ -439,20 +439,21 @@ provide("rightSidebarOpen", rightSidebarOpen);
   font-weight: 600;
   font-size: 14px;
   color: var(--text-main);
+  white-space: nowrap;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .header-icon-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   border-radius: 8px;
   cursor: pointer;
   color: var(--text-sub);
@@ -460,22 +461,28 @@ provide("rightSidebarOpen", rightSidebarOpen);
   border: none;
   transition:
     background-color 0.2s,
-    color 0.2s;
+    color 0.2s,
+    transform 0.2s;
   text-decoration: none;
 }
 
 .header-icon-btn:hover {
-  background: var(--hover-color);
+  background: var(--bg-tertiary);
   color: var(--text-main);
+  transform: translateY(-1px);
 }
 
-/* 遮罩层 */
+.header-icon-btn.is-active {
+  background: var(--accent-blue-bg);
+  color: var(--accent-blue);
+}
+
 .overlay {
-  display: none;
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(2, 6, 23, 0.48);
   z-index: 90;
+  display: none;
   opacity: 0;
   transition: opacity 0.3s ease;
 }
@@ -491,28 +498,27 @@ provide("rightSidebarOpen", rightSidebarOpen);
   }
 }
 
-/* 左侧导航边栏 */
 .sidebar-nav {
   position: fixed;
   left: 0;
   top: 0;
   bottom: 0;
-  width: var(--sidebar-width, 280px);
-  background: var(--bg-secondary);
+  width: var(--sidebar-width, 270px);
+  background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
-  z-index: 95;
+  z-index: 96;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
   transition:
-    width 0.3s ease,
+    width 0.3s cubic-bezier(0.4, 0, 0.2, 1),
     transform 0.3s ease;
 }
 
 @media (min-width: 769px) {
   .sidebar-nav.collapsed {
-    width: var(--sidebar-collapsed-width, 82px);
+    width: var(--sidebar-collapsed-width, 68px);
     overflow: visible;
     z-index: 120;
   }
@@ -529,37 +535,43 @@ provide("rightSidebarOpen", rightSidebarOpen);
   }
 }
 
-/* 主内容区域 */
 .main-area {
   flex: 1;
   display: flex;
   flex-direction: column;
-  margin-left: var(--sidebar-width, 280px);
+  margin-left: var(--sidebar-width, 270px);
+  margin-right: 0;
   height: 100vh;
-  max-height: 100vh;
   overflow: hidden;
   background: var(--bg-color);
-  transition: margin 0.3s ease;
+  transition:
+    margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    margin-right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @media (min-width: 769px) {
   .main-area.sidebar-collapsed {
-    margin-left: var(--sidebar-collapsed-width, 82px);
+    margin-left: var(--sidebar-collapsed-width, 68px);
+  }
+
+  .main-area.settings-open {
+    margin-right: var(--settings-width, 320px);
   }
 }
 
 @media (max-width: 768px) {
   .main-area {
     margin-left: 0;
+    margin-right: 0;
   }
 }
 
-/* 页面内容 */
 .page-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg-color);
   height: calc(100vh - var(--header-height, 60px));
 }
 
@@ -570,23 +582,17 @@ provide("rightSidebarOpen", rightSidebarOpen);
   }
 }
 
-/* 桌面端头部 */
 .desktop-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: var(--header-height, 60px);
-  padding: 0 20px;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border-color);
+  padding: 0 24px;
+  background: transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 72%, transparent);
   position: sticky;
   top: 0;
   z-index: 50;
-}
-
-.dark .desktop-header {
-  background: rgba(26, 26, 26, 0.8);
 }
 
 @media (max-width: 768px) {
@@ -595,25 +601,37 @@ provide("rightSidebarOpen", rightSidebarOpen);
   }
 }
 
-.desktop-header .brand-area span {
-  font-weight: 600;
-  font-size: 16px;
+.model-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  background: var(--bg-input-area);
   color: var(--text-main);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none;
 }
 
-/* 右侧设置边栏 */
+.model-selector:hover {
+  background: color-mix(in srgb, var(--bg-input-area) 75%, var(--border-color));
+}
+
 .settings-sidebar {
   position: fixed;
   right: 0;
   top: 0;
   bottom: 0;
   width: var(--settings-width, 320px);
-  background: var(--bg-secondary);
+  background: var(--bg-sidebar);
   border-left: 1px solid var(--border-color);
-  z-index: 95;
+  z-index: 97;
   overflow-y: auto;
   transform: translateX(100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: -12px 0 24px rgba(15, 23, 42, 0.08);
 }
 
 .settings-sidebar.open {
@@ -623,13 +641,13 @@ provide("rightSidebarOpen", rightSidebarOpen);
 @media (max-width: 768px) {
   .settings-sidebar {
     z-index: 101;
-    width: 85%;
+    width: min(88vw, 320px);
     max-width: 320px;
   }
 }
 
 .settings-inner {
-  padding: 20px;
+  padding: 16px 20px 20px;
 }
 
 .settings-header {
@@ -641,7 +659,7 @@ provide("rightSidebarOpen", rightSidebarOpen);
 
 .settings-header h2 {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
   margin: 0;
 }
@@ -657,11 +675,11 @@ provide("rightSidebarOpen", rightSidebarOpen);
   color: var(--text-sub);
   background: transparent;
   border: none;
-  transition: all 0.2s;
+  transition: all 0.2s ease;
 }
 
 .close-btn:hover {
-  background: var(--hover-color);
+  background: var(--bg-tertiary);
   color: var(--text-main);
 }
 
@@ -670,10 +688,11 @@ provide("rightSidebarOpen", rightSidebarOpen);
   max-height: min(90vh, 920px);
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary);
+  background: var(--bg-sidebar);
   border: 1px solid var(--border-color);
-  border-radius: 16px;
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: var(--shadow-popup);
 }
 
 .tool-modal-medium {
@@ -684,8 +703,9 @@ provide("rightSidebarOpen", rightSidebarOpen);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 14px 18px;
   border-bottom: 1px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-sidebar) 70%, var(--bg-body));
 }
 
 .tool-modal-header h3 {
@@ -715,7 +735,7 @@ provide("rightSidebarOpen", rightSidebarOpen);
 }
 
 .tool-modal-body {
-  padding: 14px;
+  padding: 14px 16px;
   overflow: auto;
 }
 

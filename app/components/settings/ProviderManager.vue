@@ -18,12 +18,27 @@ const testingId = ref<string | null>(null)
 const loadingModels = ref(false)
 const modelOptions = ref<string[]>([])
 const modelFetchError = ref<string | null>(null)
+const showApiKey = ref(false)
+const submitAttempted = ref(false)
 
 const isEditing = computed(() => editingProviderId.value !== null)
 
 const typeOptions = [
   { label: 'Gemini', value: 'gemini' },
-  { label: 'OpenAI Compatible', value: 'openai' }
+  { label: 'OpenAI', value: 'openai' }
+]
+
+const geminiSuggestedModels = [
+  'gemini-3-pro-image-preview',
+  'gemini-2.5-pro',
+  'gemini-2.5-flash'
+]
+
+const openAISuggestedModels = [
+  'gpt-4.1',
+  'gpt-4o',
+  'o4-mini',
+  'gpt-4.1-mini'
 ]
 
 const getTypeDefaults = (type: ProviderFormData['type']) => {
@@ -42,13 +57,94 @@ const getTypeDefaults = (type: ProviderFormData['type']) => {
 
 const formData = ref<ProviderFormData>({
   name: '',
-  type: 'gemini',
-  baseUrl: getTypeDefaults('gemini').baseUrl,
+  type: 'openai',
+  baseUrl: getTypeDefaults('openai').baseUrl,
   apiKey: '',
-  model: getTypeDefaults('gemini').model
+  model: getTypeDefaults('openai').model
 })
 
-const resetForm = (type: ProviderFormData['type'] = 'gemini') => {
+const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
+
+const resolveOpenAIChatPreviewUrl = (baseUrl: string) => {
+  const normalized = normalizeBaseUrl(baseUrl)
+  if (!normalized) return '/v1/chat/completions'
+  if (/\/chat\/completions$/i.test(normalized)) return normalized
+  if (/\/v\d+$/i.test(normalized)) return `${normalized}/chat/completions`
+  return `${normalized}/v1/chat/completions`
+}
+
+const normalizeFormData = (data: ProviderFormData): ProviderFormData => ({
+  name: data.name.trim(),
+  type: data.type,
+  baseUrl: data.baseUrl.trim(),
+  apiKey: data.apiKey.trim(),
+  model: data.model.trim()
+})
+
+const isValidHttpUrl = (value: string) => {
+  try {
+    const parsed = new URL(value)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+const normalizedFormData = computed(() => normalizeFormData(formData.value))
+
+const fieldErrors = computed(() => {
+  const data = normalizedFormData.value
+
+  return {
+    name: data.name ? '' : '请输入渠道名称',
+    baseUrl: !data.baseUrl
+      ? '请输入 Base URL'
+      : (isValidHttpUrl(data.baseUrl) ? '' : 'Base URL 格式不正确，请以 http(s):// 开头'),
+    apiKey: data.apiKey ? '' : '请输入 API Key',
+    model: data.model ? '' : '请输入或选择模型'
+  }
+})
+
+const canSubmit = computed(() => Object.values(fieldErrors.value).every((message) => !message))
+
+const modalDescription = computed(() => {
+  return isEditing.value
+    ? '更新渠道配置后会立即生效'
+    : '创建一个新的 API 渠道用于图像生成'
+})
+
+const namePlaceholder = computed(() => {
+  return formData.value.type === 'gemini' ? '例如：Gemini 主通道' : '例如：OpenAI 代理通道'
+})
+
+const previewRequestUrl = computed(() => {
+  const data = normalizedFormData.value
+  if (!data.baseUrl) return ''
+
+  if (data.type === 'gemini') {
+    const model = data.model || '{model}'
+    return `${normalizeBaseUrl(data.baseUrl)}/v1beta/models/${model}:generateContent`
+  }
+
+  return resolveOpenAIChatPreviewUrl(data.baseUrl)
+})
+
+const clickableModelOptions = computed(() => {
+  if (formData.value.type === 'openai' && modelOptions.value.length > 0) {
+    return modelOptions.value
+  }
+
+  return formData.value.type === 'gemini' ? geminiSuggestedModels : openAISuggestedModels
+})
+
+const modelAutocompleteValue = computed({
+  get: () => formData.value.model,
+  set: (value: string | number | boolean | null | undefined) => {
+    formData.value.model = value == null ? '' : String(value)
+  }
+})
+
+const resetForm = (type: ProviderFormData['type'] = 'openai') => {
   const defaults = getTypeDefaults(type)
   formData.value = {
     name: '',
@@ -67,7 +163,9 @@ const openAddModal = () => {
   editingProviderId.value = null
   modelOptions.value = []
   modelFetchError.value = null
-  resetForm('gemini')
+  showApiKey.value = false
+  submitAttempted.value = false
+  resetForm('openai')
   showModal.value = true
 }
 
@@ -75,6 +173,8 @@ const openEditModal = (provider: Provider) => {
   editingProviderId.value = provider.id
   modelOptions.value = []
   modelFetchError.value = null
+  showApiKey.value = false
+  submitAttempted.value = false
   formData.value = {
     name: provider.name,
     type: provider.type,
@@ -90,13 +190,21 @@ const openEditModal = (provider: Provider) => {
 }
 
 const handleSubmit = () => {
-  if (!formData.value.name || !formData.value.apiKey || !formData.value.model) return
+  submitAttempted.value = true
+
+  if (!canSubmit.value) {
+    const firstError = Object.values(fieldErrors.value).find(Boolean)
+    toast.warning('请先完善表单', firstError)
+    return
+  }
+
+  const payload = normalizedFormData.value
 
   if (isEditing.value && editingProviderId.value) {
-    updateProvider(editingProviderId.value, formData.value)
-    toast.success('渠道已更新', formData.value.name)
+    updateProvider(editingProviderId.value, payload)
+    toast.success('渠道已更新', payload.name)
   } else {
-    addProvider(formData.value)
+    addProvider(payload)
   }
 
   closeModal()
@@ -119,15 +227,26 @@ const handleTypeChange = (value: string | number | Record<string, unknown> | unk
   modelFetchError.value = null
 }
 
-const handleModelChange = (value: string | number | Record<string, unknown> | unknown[] | undefined) => {
-  if (typeof value === 'string') {
-    formData.value.model = value
-  }
+const toggleApiKeyVisible = () => {
+  showApiKey.value = !showApiKey.value
+}
+
+const resetBaseUrlByType = () => {
+  formData.value.baseUrl = getTypeDefaults(formData.value.type).baseUrl
+  modelFetchError.value = null
+}
+
+const handleModelCreate = (model: string) => {
+  formData.value.model = model.trim()
 }
 
 const loadModels = async (silent = false) => {
   if (formData.value.type !== 'openai') return
-  if (!formData.value.baseUrl.trim() || !formData.value.apiKey.trim()) {
+
+  const baseUrl = normalizedFormData.value.baseUrl
+  const apiKey = normalizedFormData.value.apiKey
+
+  if (!baseUrl || !apiKey) {
     if (!silent) {
       toast.info('请先填写 Base URL 和 API Key')
     }
@@ -138,7 +257,7 @@ const loadModels = async (silent = false) => {
   modelFetchError.value = null
 
   try {
-    const models = await fetchOpenAIModels(formData.value.baseUrl, formData.value.apiKey)
+    const models = await fetchOpenAIModels(baseUrl, apiKey)
     modelOptions.value = models
 
     if (models.length === 0) {
@@ -173,7 +292,9 @@ watch(showModal, (open) => {
   loadingModels.value = false
   modelOptions.value = []
   modelFetchError.value = null
-  resetForm('gemini')
+  showApiKey.value = false
+  submitAttempted.value = false
+  resetForm('openai')
 })
 </script>
 
@@ -235,69 +356,139 @@ watch(showModal, (open) => {
     <!-- 新增/编辑渠道弹窗 -->
     <UModal v-model:open="showModal">
       <template #content>
-        <div class="p-6 space-y-4">
-          <h3 class="text-lg font-semibold">{{ isEditing ? '编辑 API 渠道' : '添加 API 渠道' }}</h3>
+        <div class="p-6 space-y-5 w-full max-w-2xl">
+          <div>
+            <h3 class="text-lg font-semibold">{{ isEditing ? '编辑 API 渠道' : '创建 API 渠道' }}</h3>
+            <p class="text-sm text-gray-500 mt-1">
+              {{ modalDescription }}
+            </p>
+          </div>
 
-          <UFormField label="渠道名称" required>
-            <UInput v-model="formData.name" placeholder="我的 Gemini" />
-          </UFormField>
+          <form class="space-y-4" @submit.prevent="handleSubmit">
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-4">
+              <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200">基础信息</h4>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <UFormField label="渠道名称" required>
+                  <div class="space-y-1.5">
+                    <UInput v-model="formData.name" :placeholder="namePlaceholder" />
+                    <p v-if="submitAttempted && fieldErrors.name" class="text-xs text-red-500">{{ fieldErrors.name }}</p>
+                  </div>
+                </UFormField>
 
-          <UFormField label="类型" required>
-            <USelectMenu
-              :model-value="formData.type"
-              :items="typeOptions"
-              value-key="value"
-              @update:model-value="handleTypeChange"
-            />
-          </UFormField>
+                <UFormField label="类型" required>
+                  <div class="space-y-1.5">
+                    <USelectMenu
+                      :model-value="formData.type"
+                      :items="typeOptions"
+                      value-key="value"
+                      @update:model-value="handleTypeChange"
+                    />
+                    <p class="text-xs text-gray-500">
+                      {{ formData.type === 'gemini' ? '使用 Gemini 官方协议' : '使用 OpenAI 协议' }}
+                    </p>
+                  </div>
+                </UFormField>
+              </div>
+            </div>
 
-          <UFormField label="Base URL" required>
-            <UInput v-model="formData.baseUrl" placeholder="https://api.openai.com/v1 或 https://host/v1/chat/completions" />
-          </UFormField>
-
-          <UFormField label="API Key" required>
-            <UInput v-model="formData.apiKey" type="password" placeholder="sk-..." />
-          </UFormField>
-
-          <UFormField label="模型" required>
-            <div class="space-y-2">
-              <div class="flex items-center gap-2">
-                <div class="flex-1">
-                  <USelectMenu
-                    v-if="formData.type === 'openai' && modelOptions.length > 0"
-                    :model-value="formData.model"
-                    :items="modelOptions"
-                    searchable
-                    @update:model-value="handleModelChange"
-                  />
-                  <UInput v-else v-model="formData.model" placeholder="gemini-3-pro-image-preview" />
-                </div>
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-4">
+              <div class="flex items-center justify-between gap-2">
+                <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200">连接配置</h4>
                 <UButton
-                  v-if="formData.type === 'openai'"
+                  type="button"
+                  size="xs"
                   color="neutral"
-                  variant="outline"
-                  size="sm"
-                  :loading="loadingModels"
-                  @click="loadModels()"
+                  variant="ghost"
+                  icon="i-heroicons-arrow-path"
+                  @click="resetBaseUrlByType"
                 >
-                  拉取模型
+                  恢复默认地址
                 </UButton>
               </div>
-              <p v-if="formData.type === 'openai' && modelFetchError" class="text-xs text-red-500">
-                {{ modelFetchError }}
-              </p>
-              <p v-else-if="formData.type === 'openai' && modelOptions.length > 0" class="text-xs text-gray-500">
-                已获取 {{ modelOptions.length }} 个模型，可下拉选择
+
+              <UFormField label="Base URL" required>
+                <div class="space-y-1.5">
+                  <UInput v-model="formData.baseUrl" placeholder="https://api.openai.com/v1 或 https://host/v1/chat/completions" class="w-full" />
+                  <p v-if="submitAttempted && fieldErrors.baseUrl" class="text-xs text-red-500">{{ fieldErrors.baseUrl }}</p>
+                </div>
+              </UFormField>
+
+              <UFormField label="API Key" required>
+                <div class="space-y-1.5">
+                  <div class="relative">
+                    <UInput
+                      v-model="formData.apiKey"
+                      :type="showApiKey ? 'text' : 'password'"
+                      placeholder="sk-..."
+                      class="w-full pr-20"
+                    />
+                    <UButton
+                      type="button"
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      :icon="showApiKey ? 'i-heroicons-eye-slash' : 'i-heroicons-eye'"
+                      class="absolute right-1 top-1/2 -translate-y-1/2 min-w-12 justify-center"
+                      @click="toggleApiKeyVisible"
+                    >
+                      {{ showApiKey ? '隐藏' : '显示' }}
+                    </UButton>
+                  </div>
+                  <p v-if="submitAttempted && fieldErrors.apiKey" class="text-xs text-red-500">{{ fieldErrors.apiKey }}</p>
+                </div>
+              </UFormField>
+
+              <p v-if="previewRequestUrl" class="text-xs text-gray-500 break-all">
+                请求地址预览：{{ previewRequestUrl }}
               </p>
             </div>
-          </UFormField>
 
-          <div class="flex justify-end gap-2 pt-4">
-            <UButton color="neutral" variant="ghost" @click="closeModal">取消</UButton>
-            <UButton @click="handleSubmit" :disabled="!formData.name || !formData.apiKey || !formData.model">
-              {{ isEditing ? '保存' : '添加' }}
-            </UButton>
-          </div>
+            <div class="rounded-xl border border-gray-200 dark:border-gray-800 p-4 space-y-4">
+              <h4 class="text-sm font-semibold text-gray-700 dark:text-gray-200">模型配置</h4>
+              <UFormField label="模型" required>
+                <div class="space-y-2">
+                  <div class="flex items-center gap-2">
+                    <UInputMenu
+                      v-model="modelAutocompleteValue"
+                      :items="clickableModelOptions"
+                      create-item="always"
+                      placeholder="输入模型名称，支持自动补全"
+                      class="flex-1"
+                      @create="handleModelCreate"
+                    />
+                    <UButton
+                      v-if="formData.type === 'openai'"
+                      type="button"
+                      color="neutral"
+                      variant="outline"
+                      size="sm"
+                      :loading="loadingModels"
+                      @click="loadModels()"
+                    >
+                      拉取模型
+                    </UButton>
+                  </div>
+                  <p v-if="submitAttempted && fieldErrors.model" class="text-xs text-red-500">{{ fieldErrors.model }}</p>
+                  <p v-if="formData.type === 'openai' && modelFetchError" class="text-xs text-red-500">
+                    {{ modelFetchError }}
+                  </p>
+                  <p v-else-if="formData.type === 'openai' && modelOptions.length > 0" class="text-xs text-gray-500">
+                    已获取 {{ modelOptions.length }} 个模型，可输入关键字自动补全
+                  </p>
+                  <p v-else class="text-xs text-gray-500">
+                    支持自由输入；输入时会基于内置模型列表自动补全
+                  </p>
+                </div>
+              </UFormField>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-1">
+              <UButton type="button" color="neutral" variant="ghost" @click="closeModal">取消</UButton>
+              <UButton type="submit">
+                {{ isEditing ? '保存修改' : '创建渠道' }}
+              </UButton>
+            </div>
+          </form>
         </div>
       </template>
     </UModal>

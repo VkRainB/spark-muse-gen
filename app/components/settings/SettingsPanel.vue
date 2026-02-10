@@ -1,41 +1,14 @@
 <script setup lang="ts">
-import type { Resolution, AspectRatio } from '../../../stores/settings'
 import { useSettingsStore } from '../../../stores/settings'
 
 const settingsStore = useSettingsStore()
 const { selectDirectory, isSupported, isEnabled, directoryName, disable } = useFileSystem()
-
-const resolutionOptions = [
-  { label: '1K (1024x1024)', value: '1K' as Resolution },
-  { label: '2K (2048x2048)', value: '2K' as Resolution },
-  { label: '4K (4096x4096)', value: '4K' as Resolution }
-]
-
-const aspectRatioOptions = [
-  { label: '1:1 方形', value: '1:1' as AspectRatio },
-  { label: '16:9 横屏', value: '16:9' as AspectRatio },
-  { label: '9:16 竖屏', value: '9:16' as AspectRatio },
-  { label: '4:3 传统', value: '4:3' as AspectRatio },
-  { label: '3:4 肖像', value: '3:4' as AspectRatio }
-]
 
 const handleAutoSaveToggle = async () => {
   if (!settingsStore.autoSaveEnabled) {
     await selectDirectory()
   } else {
     disable()
-  }
-}
-
-const handleResolutionChange = (value: string | number | Record<string, unknown> | unknown[] | undefined) => {
-  if (typeof value === 'string') {
-    settingsStore.setResolution(value as Resolution)
-  }
-}
-
-const handleAspectRatioChange = (value: string | number | Record<string, unknown> | unknown[] | undefined) => {
-  if (typeof value === 'string') {
-    settingsStore.setAspectRatio(value as AspectRatio)
   }
 }
 
@@ -46,71 +19,49 @@ const handleContextChange = (event: Event) => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- 生成设置 -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold border-b pb-2 dark:border-gray-700">生成设置</h3>
+  <div class="settings-panel">
+    <section class="config-group">
+      <h3 class="config-label-lg">生成设置</h3>
+      <p class="config-tip">分辨率和长宽比已移至聊天输入框上方，可在输入区直接快速调整。</p>
 
-      <UFormField label="默认分辨率">
-        <USelectMenu
-          :model-value="settingsStore.resolution"
-          @update:model-value="handleResolutionChange"
-          :items="resolutionOptions"
-          value-key="value"
-        />
-      </UFormField>
-
-      <UFormField label="默认长宽比">
-        <USelectMenu
-          :model-value="settingsStore.aspectRatio"
-          @update:model-value="handleAspectRatioChange"
-          :items="aspectRatioOptions"
-          value-key="value"
-        />
-      </UFormField>
-
-      <UFormField label="流式传输">
-        <div class="flex items-center gap-2">
+      <UFormField label="流式传输" class="field-row">
+        <div class="switch-row">
           <USwitch :model-value="settingsStore.streamEnabled" @update:model-value="settingsStore.toggleStream()" />
-          <span class="text-sm text-gray-500">{{ settingsStore.streamEnabled ? '已启用' : '已禁用' }}</span>
+          <span class="field-value">{{ settingsStore.streamEnabled ? '已启用' : '已禁用' }}</span>
         </div>
       </UFormField>
-    </div>
+    </section>
 
-    <!-- 上下文设置 -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold border-b pb-2 dark:border-gray-700">对话设置</h3>
+    <section class="config-group">
+      <h3 class="config-label-lg">对话设置</h3>
 
-      <UFormField label="上下文消息数">
-        <div class="flex items-center gap-4">
+      <UFormField label="上下文消息数" class="field-row">
+        <div class="slider-row">
           <input
             type="range"
             :value="settingsStore.contextCount"
             @input="handleContextChange"
             min="1"
             max="50"
-            class="flex-1"
+            class="slider-range"
           />
-          <span class="w-8 text-center font-mono">{{ settingsStore.contextCount }}</span>
+          <span class="slider-value">{{ settingsStore.contextCount }}</span>
         </div>
       </UFormField>
-    </div>
+    </section>
 
-    <!-- 自动保存 -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold border-b pb-2 dark:border-gray-700">自动保存</h3>
+    <section class="config-group">
+      <h3 class="config-label-lg">自动保存</h3>
 
-      <div v-if="!isSupported" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-        <p class="text-sm text-yellow-700 dark:text-yellow-300">
-          您的浏览器不支持 File System Access API。请使用 Chrome 86+ 或 Edge 86+ 以启用自动保存功能。
-        </p>
+      <div v-if="!isSupported" class="notice-warning">
+        您的浏览器不支持 File System Access API。请使用 Chrome 86+ 或 Edge 86+ 以启用自动保存功能。
       </div>
 
       <template v-else>
-        <UFormField label="自动保存到本地">
-          <div class="flex items-center gap-2">
+        <UFormField label="自动保存到本地" class="field-row">
+          <div class="switch-row">
             <USwitch :model-value="isEnabled" @update:model-value="handleAutoSaveToggle" />
-            <span class="text-sm text-gray-500">
+            <span class="field-value">
               {{ isEnabled ? `已启用 - ${directoryName}` : '已禁用' }}
             </span>
           </div>
@@ -120,22 +71,138 @@ const handleContextChange = (event: Event) => {
           v-if="!isEnabled"
           icon="i-heroicons-folder-open"
           variant="outline"
+          class="outline-btn"
           @click="() => { void selectDirectory() }"
         >
           选择保存目录
         </UButton>
       </template>
-    </div>
+    </section>
 
-    <!-- 主题 -->
-    <div class="space-y-4">
-      <h3 class="text-lg font-semibold border-b pb-2 dark:border-gray-700">外观</h3>
-      <UFormField label="主题">
+    <section class="config-group">
+      <h3 class="config-label-lg">外观</h3>
+      <UFormField label="主题" class="field-row">
         <SettingsThemeSwitch />
       </UFormField>
-    </div>
+    </section>
 
-    <!-- 渠道管理 -->
     <SettingsProviderManager />
   </div>
 </template>
+
+<style scoped>
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.config-group {
+  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent);
+  padding-bottom: 16px;
+}
+
+.config-label-lg {
+  margin: 0;
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.config-tip {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
+
+.field-row {
+  margin-top: 12px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field-value {
+  font-size: 12px;
+  color: var(--text-sub);
+  line-height: 1.4;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slider-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 99px;
+  background: var(--bg-tertiary);
+  outline: none;
+}
+
+.slider-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--text-sub);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
+}
+
+.slider-range::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--text-sub);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
+}
+
+.slider-value {
+  width: 34px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-sub);
+}
+
+.notice-warning {
+  margin-top: 12px;
+  border-radius: 10px;
+  border: 1px solid #fde68a;
+  background: #fef9c3;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 10px 12px;
+}
+
+:deep(.dark) .notice-warning {
+  border-color: #854d0e;
+  background: rgba(133, 77, 14, 0.2);
+  color: #fef08a;
+}
+
+.outline-btn {
+  margin-top: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+:deep(.ui-form-field-label) {
+  font-size: 12px;
+  color: var(--text-sub);
+}
+</style>

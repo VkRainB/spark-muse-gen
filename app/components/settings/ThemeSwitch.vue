@@ -9,19 +9,54 @@ const themeOptions = [
 </script>
 
 <template>
-  <div class="flex items-center gap-2">
-    <div class="flex flex-wrap gap-2">
-      <UButton
-        v-for="option in themeOptions"
-        :key="option.value"
-        :icon="option.icon"
-        :color="theme === option.value ? 'primary' : 'neutral'"
-        :variant="theme === option.value ? 'solid' : 'ghost'"
-        size="sm"
-        @click="setTheme(option.value as 'light' | 'dark' | 'system')"
-      >
-        {{ option.label }}
-      </UButton>
-    </div>
+  <div class="theme-switcher-container">
+    <button
+      v-for="option in themeOptions"
+      :key="option.value"
+      class="theme-btn"
+      :class="{ active: theme === option.value }"
+      @click="setTheme(option.value as 'light' | 'dark' | 'system')"
+    >
+      <UIcon :name="option.icon" class="w-3.5 h-3.5" />
+      <span>{{ option.label }}</span>
+    </button>
   </div>
 </template>
+
+<style scoped>
+.theme-switcher-container {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 4px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.theme-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-sub);
+  border-radius: 8px;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.theme-btn:hover {
+  color: var(--text-main);
+}
+
+.theme-btn.active {
+  background: var(--card-bg);
+  color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
+}
+</style>

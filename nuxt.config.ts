@@ -3,6 +3,9 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-01',
   devtools: { enabled: false },
   ssr: false, // SPA 模式
+  devServer: {
+    port: 3001
+  },
 
   future: {
     compatibilityVersion: 4

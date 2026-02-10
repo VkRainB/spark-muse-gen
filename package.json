@@ -10,7 +10,7 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
-    "@microsoft/fetch-event-source": "^2.0.1",
+    "@fortaine/fetch-event-source": "^3.0.6",
     "@nuxt/ui": "^4.4.0",
     "@nuxtjs/color-mode": "^3.5.2",
     "@pinia/nuxt": "^0.11.3",

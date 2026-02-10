@@ -1,6 +1,6 @@
 import type { ImageGenerationOptions, GenerationResult, GeneratedImage } from '../../types/image'
 import type { Message } from '../../types/chat'
-import { fetchEventSource } from '@microsoft/fetch-event-source'
+import { fetchEventSource } from '@fortaine/fetch-event-source'
 import { useProviderStore } from '../../stores/provider'
 
 interface ResolutionConfig {

@@ -371,25 +371,27 @@ onUnmounted(() => {
 }
 
 .sidebar-nav-content.collapsed .new-chat-btn {
-  width: 48px;
-  min-width: 48px;
-  height: 48px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   margin: 0;
   padding: 0;
-  border-style: solid;
-  border-width: 1px;
+  border: none;
   border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .sidebar-nav-content.collapsed :deep(.nav-card) {
-  width: 48px;
-  min-width: 48px;
-  height: 48px;
-  min-height: 48px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
   margin: 0;
   padding: 0;
   gap: 0;
   justify-content: center;
+  border-radius: 12px;
+  background: var(--card-bg);
 }
 
 .sidebar-nav-content.collapsed :deep(.nav-card:hover) {
@@ -408,13 +410,13 @@ onUnmounted(() => {
 }
 
 .collapsed-session-btn {
-  width: 48px;
-  min-width: 48px;
-  height: 48px;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
   border-radius: 12px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--accent-blue);
   background: var(--card-bg);
-  color: var(--text-sub);
+  color: var(--accent-blue);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -423,21 +425,21 @@ onUnmounted(() => {
 }
 
 .collapsed-session-btn:hover {
-  border-color: var(--primary-color);
-  color: var(--primary-color);
-  background: var(--hover-color);
+  border-color: var(--accent-blue);
+  color: var(--accent-blue);
+  background: var(--accent-blue-bg);
 }
 
 .session-drawer {
   position: absolute;
-  left: calc(100% + 6px);
+  left: calc(100% + 12px);
   bottom: 0;
-  width: 300px;
+  width: 280px;
   max-height: min(68vh, 520px);
   background: var(--card-bg);
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  box-shadow: var(--shadow-md);
+  border-radius: 14px;
+  box-shadow: var(--shadow-popup);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -452,7 +454,7 @@ onUnmounted(() => {
   border-bottom: 1px solid var(--border-color);
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-sub);
+  color: var(--text-tertiary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -490,7 +492,7 @@ onUnmounted(() => {
 }
 
 .clear-btn:hover {
-  background: #fce8e6;
+  background: color-mix(in srgb, #fca5a5 35%, transparent);
 }
 
 :deep(.dark) .clear-btn:hover {
