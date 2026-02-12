@@ -54,6 +54,7 @@ const chatInputBridge = useState<{
 // 侧边栏状态
 const leftSidebarOpen = ref(false);
 const rightSidebarOpen = ref(false);
+const promptDrawerOpen = ref(false);
 const leftSidebarCollapsed = useState("left-sidebar-collapsed", () => false);
 
 onMounted(() => {
@@ -86,7 +87,13 @@ const toggleSettings = () => {
   rightSidebarOpen.value = !rightSidebarOpen.value;
   if (rightSidebarOpen.value) {
     leftSidebarOpen.value = false;
+    promptDrawerOpen.value = false;
   }
+};
+
+// 切换提示词抽屉
+const togglePromptDrawer = () => {
+  promptDrawerOpen.value = !promptDrawerOpen.value;
 };
 
 // 关闭所有侧边栏
@@ -182,6 +189,8 @@ provide("toggleSettings", toggleSettings);
 provide("closeAllSidebars", closeAllSidebars);
 provide("leftSidebarOpen", leftSidebarOpen);
 provide("rightSidebarOpen", rightSidebarOpen);
+provide("promptDrawerOpen", promptDrawerOpen);
+provide("togglePromptDrawer", togglePromptDrawer);
 </script>
 
 <template>
@@ -226,6 +235,18 @@ provide("rightSidebarOpen", rightSidebarOpen);
       </div>
 
       <div class="header-actions">
+        <button
+          class="header-icon-btn"
+          :class="{ 'is-active': promptDrawerOpen }"
+          @click="togglePromptDrawer"
+          title="快捷提示词"
+          aria-label="快捷提示词"
+        >
+          <UIcon
+            :name="promptDrawerOpen ? 'i-heroicons-bolt-solid' : 'i-heroicons-bolt'"
+            class="w-5 h-5"
+          />
+        </button>
         <button
           class="header-icon-btn"
           @click="createNewSession"
@@ -327,6 +348,17 @@ provide("rightSidebarOpen", rightSidebarOpen);
           >
             <UIcon name="i-mdi-github" class="w-5 h-5" />
           </a>
+          <button
+            class="header-icon-btn"
+            :class="{ 'is-active': promptDrawerOpen }"
+            title="快捷提示词"
+            @click="togglePromptDrawer"
+          >
+            <UIcon
+              :name="promptDrawerOpen ? 'i-heroicons-bolt-solid' : 'i-heroicons-bolt'"
+              class="w-5 h-5"
+            />
+          </button>
           <button
             class="header-icon-btn"
             title="新建对话"
