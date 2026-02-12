@@ -11,6 +11,10 @@ export default defineNuxtConfig({
     compatibilityVersion: 4
   },
 
+  pages: {
+    pattern: ['**/*.vue', '!**/_components/**'] // 排除 pages 内的任意 _components
+  },
+
   modules: [
     '@nuxtjs/color-mode',
     '@nuxt/ui',

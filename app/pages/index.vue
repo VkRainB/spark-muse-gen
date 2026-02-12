@@ -14,9 +14,9 @@ const chatInputBridge = useState<{
 const promptDrawerOpen = inject<Ref<boolean>>("promptDrawerOpen")!;
 
 const chatStatus = computed(() => {
-  if (!isGenerating.value) return 'ready' as const
-  if (streamingText.value) return 'streaming' as const
-  return 'submitted' as const
+  if (!isGenerating.value) return "ready" as const;
+  if (streamingText.value) return "streaming" as const;
+  return "submitted" as const;
 });
 
 // 监听消息变化，自动滚动
@@ -50,18 +50,18 @@ const handlePromptSend = (prompt: string) => {
 
 const handleResend = (message: any) => {
   // 移除最后一条助手回复
-  chat.removeLastAssistantReply()
+  chat.removeLastAssistantReply();
   // 通过 inputBridge 重新发送用户消息（resend 模式不会重复添加用户消息）
   chatInputBridge.value = {
-    prompt: message.content || '',
+    prompt: message.content || "",
     send: true,
     resend: true,
     nonce: Date.now(),
-  }
+  };
 };
 
 const handleClearMessages = () => {
-  chat.clearMessages()
+  chat.clearMessages();
 };
 </script>
 
