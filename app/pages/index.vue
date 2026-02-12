@@ -59,6 +59,10 @@ const handleResend = (message: any) => {
     nonce: Date.now(),
   }
 };
+
+const handleClearMessages = () => {
+  chat.clearMessages()
+};
 </script>
 
 <template>
@@ -107,6 +111,19 @@ const handleResend = (message: any) => {
           class="messages-area"
           @resend="handleResend"
         />
+      </div>
+
+      <!-- 工具栏 -->
+      <div v-if="chat.currentMessages.value.length > 0" class="chat-toolbar">
+        <button
+          class="toolbar-btn"
+          title="清空当前会话消息"
+          :disabled="isGenerating"
+          @click="handleClearMessages"
+        >
+          <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+          <span>清除上下文</span>
+        </button>
       </div>
 
       <!-- 输入区域 -->
@@ -199,5 +216,39 @@ const handleResend = (message: any) => {
     padding: 16px;
     padding-right: 8px;
   }
+}
+
+.chat-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 20px;
+  max-width: var(--content-max-width, 860px);
+  margin: 0 auto;
+  width: 100%;
+}
+
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.toolbar-btn:hover:not(:disabled) {
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+}
+
+.toolbar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 </style>

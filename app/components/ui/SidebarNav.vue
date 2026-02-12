@@ -16,6 +16,17 @@ const sessionDrawerPinned = ref(false);
 const closeTimer = ref<number | null>(null);
 const showClearConfirm = ref(false);
 
+// 重命名状态
+const renamingSessionId = ref<string | null>(null);
+const renameInput = ref('');
+
+// 菜单状态
+const menuOpenSessionId = ref<string | null>(null);
+
+// 删除确认状态
+const showDeleteConfirm = ref(false);
+const pendingDeleteSessionId = ref<string | null>(null);
+
 const emit = defineEmits<{
   "open-xhs": [];
   "open-banana": [];
@@ -168,7 +179,62 @@ const deleteSessionFromDrawer = (id: string) => {
   chat.deleteSession(id);
 };
 
+// 重命名会话
+const startRename = (session: { id: string; title: string }) => {
+  menuOpenSessionId.value = null;
+  renamingSessionId.value = session.id;
+  renameInput.value = session.title;
+  nextTick(() => {
+    const input = document.querySelector('.rename-input') as HTMLInputElement;
+    input?.focus();
+    input?.select();
+  });
+};
+
+const confirmRename = () => {
+  if (renamingSessionId.value && renameInput.value.trim()) {
+    chat.updateSession(renamingSessionId.value, { title: renameInput.value.trim() });
+  }
+  renamingSessionId.value = null;
+};
+
+const cancelRename = () => {
+  renamingSessionId.value = null;
+};
+
+const toggleSessionMenu = (sessionId: string) => {
+  menuOpenSessionId.value = menuOpenSessionId.value === sessionId ? null : sessionId;
+};
+
+const deleteSessionWithMenu = (id: string) => {
+  menuOpenSessionId.value = null;
+  pendingDeleteSessionId.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const deleteSessionFromDrawerWithMenu = (id: string) => {
+  menuOpenSessionId.value = null;
+  pendingDeleteSessionId.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const confirmDeleteSession = () => {
+  if (pendingDeleteSessionId.value) {
+    chat.deleteSession(pendingDeleteSessionId.value);
+  }
+  showDeleteConfirm.value = false;
+  pendingDeleteSessionId.value = null;
+};
+
 const handleGlobalClick = (event: MouseEvent) => {
+  // 关闭会话菜单
+  if (menuOpenSessionId.value) {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.session-menu-wrapper')) {
+      menuOpenSessionId.value = null;
+    }
+  }
+
   if (!props.collapsed || !sessionDrawerOpen.value) return;
   if (!containerRef.value) return;
 
@@ -258,14 +324,35 @@ onUnmounted(() => {
         :class="{ active: session.id === chat.currentSession.value?.id }"
         @click="switchSessionAndGoChat(session.id)"
       >
-        <span class="session-title">{{ session.title }}</span>
-        <button
-          class="session-delete"
-          @click.stop="chat.deleteSession(session.id)"
-          title="删除"
-        >
-          <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
-        </button>
+        <input
+          v-if="renamingSessionId === session.id"
+          v-model="renameInput"
+          class="rename-input"
+          @click.stop
+          @keydown.enter="confirmRename"
+          @keydown.escape="cancelRename"
+          @blur="confirmRename"
+        />
+        <span v-else class="session-title">{{ session.title }}</span>
+        <div v-if="renamingSessionId !== session.id" class="session-menu-wrapper">
+          <button
+            class="session-menu-btn"
+            @click.stop="toggleSessionMenu(session.id)"
+            title="更多操作"
+          >
+            <UIcon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
+          </button>
+          <div v-if="menuOpenSessionId === session.id" class="session-menu-dropdown">
+            <button class="session-menu-item" @click.stop="startRename(session)">
+              <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
+              <span>重命名</span>
+            </button>
+            <button class="session-menu-item danger" @click.stop="deleteSessionWithMenu(session.id)">
+              <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+              <span>删除</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- 空状态 -->
@@ -312,14 +399,35 @@ onUnmounted(() => {
             :class="{ active: session.id === chat.currentSession.value?.id }"
             @click="switchSessionFromDrawer(session.id)"
           >
-            <span class="session-title">{{ session.title }}</span>
-            <button
-              class="session-delete"
-              @click.stop="deleteSessionFromDrawer(session.id)"
-              title="删除"
-            >
-              <UIcon name="i-heroicons-x-mark" class="w-4 h-4" />
-            </button>
+            <input
+              v-if="renamingSessionId === session.id"
+              v-model="renameInput"
+              class="rename-input"
+              @click.stop
+              @keydown.enter="confirmRename"
+              @keydown.escape="cancelRename"
+              @blur="confirmRename"
+            />
+            <span v-else class="session-title">{{ session.title }}</span>
+            <div v-if="renamingSessionId !== session.id" class="session-menu-wrapper">
+              <button
+                class="session-menu-btn"
+                @click.stop="toggleSessionMenu(session.id)"
+                title="更多操作"
+              >
+                <UIcon name="i-heroicons-ellipsis-horizontal" class="w-4 h-4" />
+              </button>
+              <div v-if="menuOpenSessionId === session.id" class="session-menu-dropdown">
+                <button class="session-menu-item" @click.stop="startRename(session)">
+                  <UIcon name="i-heroicons-pencil-square" class="w-4 h-4" />
+                  <span>重命名</span>
+                </button>
+                <button class="session-menu-item danger" @click.stop="deleteSessionFromDrawerWithMenu(session.id)">
+                  <UIcon name="i-heroicons-trash" class="w-4 h-4" />
+                  <span>删除</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -335,6 +443,14 @@ onUnmounted(() => {
       description="此操作不可撤销，所有会话记录将被永久删除。"
       confirm-text="确认清空"
       @confirm="confirmClearAllSessions"
+    />
+
+    <UiConfirmDialog
+      v-model:open="showDeleteConfirm"
+      title="删除此对话？"
+      description="此操作不可撤销，该会话记录将被永久删除。"
+      confirm-text="确认删除"
+      @confirm="confirmDeleteSession"
     />
   </div>
 </template>
@@ -488,5 +604,88 @@ onUnmounted(() => {
   padding: 20px;
   color: var(--text-sub);
   font-size: 13px;
+}
+
+.rename-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--accent-blue);
+  border-radius: 4px;
+  background: var(--card-bg);
+  color: var(--text-main);
+  font-size: 13px;
+  padding: 2px 6px;
+  outline: none;
+  font-family: inherit;
+}
+
+.session-menu-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.session-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-sub);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.session-item:hover .session-menu-btn,
+.session-menu-btn[aria-expanded="true"] {
+  opacity: 1;
+}
+
+.session-menu-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-main);
+}
+
+.session-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 120px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: var(--shadow-popup);
+  padding: 4px;
+  z-index: 400;
+}
+
+.session-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.session-menu-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.session-menu-item.danger {
+  color: #d93025;
+}
+
+.session-menu-item.danger:hover {
+  background: color-mix(in srgb, #fca5a5 25%, transparent);
 }
 </style>
