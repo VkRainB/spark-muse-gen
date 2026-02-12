@@ -7,8 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   copy: [message: Message];
-  delete: [id: string];
-  regenerate: [message: Message];
+  resend: [message: Message];
 }>();
 
 const { openLightbox } = useLightbox();
@@ -24,6 +23,17 @@ const chatMessages = computed(() => {
     // 保留原始数据用于图片展示和操作
     _raw: msg,
   }));
+});
+
+// 判断是否是最后一条用户消息
+const lastUserMessageId = computed(() => {
+  for (let i = props.messages.length - 1; i >= 0; i--) {
+    const msg = props.messages[i]
+    if (msg && msg.role === 'user') {
+      return msg.id
+    }
+  }
+  return null
 });
 
 const getImageSrc = (image: { data: string; mimeType: string }) => {
@@ -77,15 +87,6 @@ defineExpose({ scrollToBottom });
             label: '复制',
             icon: 'i-heroicons-clipboard',
           },
-          {
-            label: '重新生成',
-            icon: 'i-heroicons-arrow-path',
-          },
-          {
-            label: '删除',
-            icon: 'i-heroicons-trash',
-            color: 'error' as const,
-          },
         ],
       }"
     >
@@ -131,19 +132,13 @@ defineExpose({ scrollToBottom });
             @click="copyContent((message as any)._raw)"
           />
           <UButton
-            v-if="message.role === 'assistant'"
+            v-if="message.role === 'user' && message.id === lastUserMessageId"
             size="xs"
             color="neutral"
             variant="ghost"
             icon="i-heroicons-arrow-path"
-            @click="emit('regenerate', (message as any)._raw)"
-          />
-          <UButton
-            size="xs"
-            color="error"
-            variant="ghost"
-            icon="i-heroicons-trash"
-            @click="emit('delete', message.id)"
+            title="重新发送"
+            @click="emit('resend', (message as any)._raw)"
           />
         </div>
       </template>

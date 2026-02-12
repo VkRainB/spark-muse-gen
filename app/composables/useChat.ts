@@ -64,7 +64,7 @@ export function useChat() {
 
     sendUserMessage,
     addAssistantMessage,
-    deleteMessage: store.deleteMessage,
+    removeLastAssistantReply: store.removeLastAssistantReply,
     clearMessages,
 
     setContextCount: store.setContextCount,

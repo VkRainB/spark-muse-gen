@@ -77,10 +77,17 @@ export const useChatStore = defineStore('chat', {
       return newMessage
     },
 
-    deleteMessage(id: string) {
-      const index = this.messages.findIndex((m: Message) => m.id === id)
-      if (index !== -1) {
-        this.messages.splice(index, 1)
+    // 移除当前会话最后一条助手回复（用于重新生成）
+    removeLastAssistantReply() {
+      const sessionMessages = this.currentMessages
+      if (sessionMessages.length === 0) return
+
+      const lastMsg = sessionMessages[sessionMessages.length - 1]
+      if (lastMsg && lastMsg.role === 'assistant') {
+        const index = this.messages.findIndex((m: Message) => m.id === lastMsg.id)
+        if (index !== -1) {
+          this.messages.splice(index, 1)
+        }
       }
     },
 

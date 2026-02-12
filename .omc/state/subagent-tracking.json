@@ -8,10 +8,64 @@
       "status": "failed",
       "completed_at": "2026-02-12T07:38:27.798Z",
       "duration_ms": 132127
+    },
+    {
+      "agent_id": "aa2992c",
+      "agent_type": "oh-my-claudecode:explore-high",
+      "started_at": "2026-02-12T07:49:24.404Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T07:52:03.379Z",
+      "duration_ms": 158975
+    },
+    {
+      "agent_id": "a2d91cc",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-02-12T07:53:17.447Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T07:53:51.061Z",
+      "duration_ms": 33614
+    },
+    {
+      "agent_id": "a1220af",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-02-12T07:53:17.638Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T07:54:47.640Z",
+      "duration_ms": 90002
+    },
+    {
+      "agent_id": "a554a4d",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-02-12T07:55:31.921Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T07:56:44.118Z",
+      "duration_ms": 72197
+    },
+    {
+      "agent_id": "a576766",
+      "agent_type": "oh-my-claudecode:architect",
+      "started_at": "2026-02-12T07:58:26.747Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T07:59:46.446Z",
+      "duration_ms": 79699
+    },
+    {
+      "agent_id": "aea5fc8",
+      "agent_type": "oh-my-claudecode:executor",
+      "started_at": "2026-02-12T08:10:01.396Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T08:11:15.069Z",
+      "duration_ms": 73673
     }
   ],
-  "total_spawned": 1,
+  "total_spawned": 7,
   "total_completed": 0,
-  "total_failed": 1,
-  "last_updated": "2026-02-12T07:39:52.487Z"
+  "total_failed": 7,
+  "last_updated": "2026-02-12T08:12:02.960Z"
 }

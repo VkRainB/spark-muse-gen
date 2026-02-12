@@ -7,7 +7,7 @@ const { generateImage, isGenerating, progress, currentTask, cancelGeneration } =
   useImageGeneration();
 const { saveToFileSystem, isEnabled: autoSaveEnabled } = useFileSystem();
 const chat = useChat();
-const inputBridge = useState<{ prompt: string; send: boolean; nonce: number }>(
+const inputBridge = useState<{ prompt: string; send: boolean; resend?: boolean; nonce: number }>(
   "chat-input-bridge",
   () => ({
     prompt: "",
@@ -138,6 +138,45 @@ const sendMessage = async () => {
   }
 };
 
+// 重新生成：不添加用户消息，只重新调用图像生成
+const resendMessage = async () => {
+  if (!prompt.value.trim() && previewImages.value.length === 0) return;
+
+  const userPrompt = prompt.value.trim();
+  const refImages = [...previewImages.value];
+
+  // 清空输入
+  prompt.value = "";
+  previewImages.value = [];
+  paramsOpen.value = false;
+  adjustTextareaHeight();
+
+  // 不添加用户消息，直接调用图像生成
+  const result = await generateImage({
+    prompt: userPrompt,
+    resolution: settingsStore.resolution,
+    aspectRatio: settingsStore.aspectRatio,
+    referenceImage: refImages[0]?.data,
+    contextMessages: chat.contextMessages.value,
+    stream: settingsStore.streamEnabled,
+  });
+
+  if (result.success && result.images.length > 0) {
+    const generatedImages = result.images.map((img) => ({
+      data: img.data,
+      mimeType: img.mimeType,
+    }));
+
+    chat.addAssistantMessage("图像生成完成", generatedImages);
+
+    if (autoSaveEnabled.value) {
+      await saveToFileSystem(generatedImages, "generated");
+    }
+
+    emit("generated", generatedImages);
+  }
+};
+
 // 处理键盘事件
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === "Enter" && !e.shiftKey) {
@@ -163,7 +202,11 @@ watch(
     textareaRef.value?.focus();
 
     if (inputBridge.value.send && prompt.value.trim()) {
-      await sendMessage();
+      if (inputBridge.value.resend) {
+        await resendMessage();
+      } else {
+        await sendMessage();
+      }
     }
   },
 );

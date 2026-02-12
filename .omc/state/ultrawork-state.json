@@ -1,0 +1,7 @@
+{
+  "active": true,
+  "started_at": "2026-02-12T07:49:12.363Z",
+  "original_prompt": "/oh-my-claudecode:ralph 聊天信息不需要删除操作，最新一条用户信息可以重新发送，覆盖掉系统回复的内容，请求重新生成",
+  "reinforcement_count": 0,
+  "last_checked_at": "2026-02-12T07:49:12.363Z"
+}

@@ -110,7 +110,7 @@ const handleToolClick = (
     | "open-sticker"
     | "open-slicer",
 ) => {
-  emit(eventName);
+  (emit as (event: string) => void)(eventName);
 };
 
 const openSessionDrawerByHover = () => {

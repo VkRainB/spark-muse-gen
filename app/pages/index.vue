@@ -6,6 +6,7 @@ const messageListRef = ref<{ scrollToBottom: () => void }>();
 const chatInputBridge = useState<{
   prompt: string;
   send: boolean;
+  resend?: boolean;
   nonce: number;
 }>("chat-input-bridge", () => ({ prompt: "", send: false, nonce: 0 }));
 
@@ -34,9 +35,22 @@ const handlePromptSend = (prompt: string) => {
   chatInputBridge.value = {
     prompt,
     send: true,
+    resend: false,
     nonce: Date.now(),
   };
   promptDrawerOpen.value = false;
+};
+
+const handleResend = (message: any) => {
+  // 移除最后一条助手回复
+  chat.removeLastAssistantReply()
+  // 通过 inputBridge 重新发送用户消息（resend 模式不会重复添加用户消息）
+  chatInputBridge.value = {
+    prompt: message.content || '',
+    send: true,
+    resend: true,
+    nonce: Date.now(),
+  }
 };
 </script>
 
@@ -82,7 +96,7 @@ const handlePromptSend = (prompt: string) => {
           ref="messageListRef"
           :messages="chat.currentMessages.value"
           class="messages-area"
-          @delete="chat.deleteMessage"
+          @resend="handleResend"
         />
       </div>
 
@@ -95,7 +109,7 @@ const handlePromptSend = (prompt: string) => {
       v-model:open="promptDrawerOpen"
       side="right"
       title="快捷提示词"
-      :ui="{ width: 'max-w-xs' }"
+      :ui="{ content: 'max-w-xs' }"
     >
       <template #body>
         <ChatQuickPromptPanel
