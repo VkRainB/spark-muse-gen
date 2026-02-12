@@ -169,11 +169,13 @@ export function useImageGeneration() {
   const providerStore = useProviderStore()
   const toast = useAppToast()
 
-  const isGenerating = ref(false)
-  const progress = ref(0)
-  const currentTask = ref<string | null>(null)
-  const error = ref<string | null>(null)
-  const abortController = ref<AbortController | null>(null)
+  // 使用 useState 确保所有组件共享同一份状态（单例）
+  const isGenerating = useState('img-gen-generating', () => false)
+  const progress = useState('img-gen-progress', () => 0)
+  const currentTask = useState<string | null>('img-gen-task', () => null)
+  const error = useState<string | null>('img-gen-error', () => null)
+  const abortController = useState<AbortController | null>('img-gen-abort', () => null)
+  const streamingText = useState('img-gen-streaming', () => '')
 
   // 模拟进度 - 使用缓动函数
   const simulateProgress = (estimatedTime: number) => {
@@ -388,6 +390,7 @@ export function useImageGeneration() {
     currentTask.value = '正在生成图像...'
     error.value = null
     abortController.value = new AbortController()
+    streamingText.value = ''
 
     const config = RESOLUTION_MAP[options.resolution] ?? RESOLUTION_MAP['1K']!
     const stopProgress = simulateProgress(config.estimatedTime)
@@ -432,8 +435,11 @@ export function useImageGeneration() {
           },
           abortCtrl: abortController.value,
           timeout: config.estimatedTime * 2 * 1000,
-          onMessage: (_item: SSEMessageItem) => {
-            // streamFetch 的 AnimationQueue 会自动累积 responseText
+          onMessage: (item: SSEMessageItem) => {
+            // 实时更新流式文本（打字机效果）
+            if (item.text) {
+              streamingText.value += item.text
+            }
           }
         })
 
@@ -510,6 +516,7 @@ export function useImageGeneration() {
       isGenerating.value = false
       currentTask.value = null
       abortController.value = null
+      streamingText.value = ''
     }
   }
 
@@ -525,6 +532,7 @@ export function useImageGeneration() {
     progress: readonly(progress),
     currentTask: readonly(currentTask),
     error: readonly(error),
+    streamingText: readonly(streamingText),
     generateImage,
     cancelGeneration
   }

@@ -199,7 +199,12 @@ function dispatchSSEEvent(
       // 兼容标准 OpenAI SSE 格式（event 字段为空）
       const { text: defaultText, reasoning: defaultReasoning } = extractDelta(json)
       if (defaultReasoning) queue.push({ event: SSEEvent.FAST_ANSWER, reasoningText: defaultReasoning })
-      if (defaultText) queue.push({ event: SSEEvent.FAST_ANSWER, text: defaultText })
+      // 逐字符推送，实现打字机效果
+      if (defaultText) {
+        for (const char of defaultText) {
+          queue.push({ event: SSEEvent.ANSWER, text: char })
+        }
+      }
       break
     }
   }

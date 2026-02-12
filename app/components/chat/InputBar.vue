@@ -3,7 +3,7 @@ import { useSettingsStore } from "../../../stores/settings";
 import type { AspectRatio, Resolution } from "../../../stores/settings";
 
 const settingsStore = useSettingsStore();
-const { generateImage, isGenerating, progress, currentTask, cancelGeneration } =
+const { generateImage, isGenerating, cancelGeneration } =
   useImageGeneration();
 const { saveToFileSystem, isEnabled: autoSaveEnabled } = useFileSystem();
 const chat = useChat();
@@ -233,14 +233,6 @@ watch(
         </button>
       </div>
     </div>
-
-    <!-- 进度条 -->
-    <UiSmartProgressBar
-      v-if="isGenerating"
-      :progress="progress"
-      :task="currentTask"
-      class="mb-3"
-    />
 
     <!-- 输入包装器 -->
     <div class="params-popup" :class="{ open: paramsOpen }">

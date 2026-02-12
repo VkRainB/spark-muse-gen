@@ -1,116 +1,26 @@
 {
   "agents": [
     {
-      "agent_id": "ac47ee3",
-      "agent_type": "Explore",
-      "started_at": "2026-02-12T07:36:15.671Z",
+      "agent_id": "a141d6a",
+      "agent_type": "feature-dev:code-explorer",
+      "started_at": "2026-02-12T09:11:47.053Z",
       "parent_mode": "none",
       "status": "failed",
-      "completed_at": "2026-02-12T07:38:27.798Z",
-      "duration_ms": 132127
+      "completed_at": "2026-02-12T09:13:41.033Z",
+      "duration_ms": 113980
     },
     {
-      "agent_id": "aa2992c",
-      "agent_type": "oh-my-claudecode:explore-high",
-      "started_at": "2026-02-12T07:49:24.404Z",
-      "parent_mode": "ultrawork",
+      "agent_id": "a67c129",
+      "agent_type": "feature-dev:code-explorer",
+      "started_at": "2026-02-12T09:11:47.090Z",
+      "parent_mode": "none",
       "status": "failed",
-      "completed_at": "2026-02-12T07:52:03.379Z",
-      "duration_ms": 158975
-    },
-    {
-      "agent_id": "a2d91cc",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T07:53:17.447Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T07:53:51.061Z",
-      "duration_ms": 33614
-    },
-    {
-      "agent_id": "a1220af",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T07:53:17.638Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T07:54:47.640Z",
-      "duration_ms": 90002
-    },
-    {
-      "agent_id": "a554a4d",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T07:55:31.921Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T07:56:44.118Z",
-      "duration_ms": 72197
-    },
-    {
-      "agent_id": "a576766",
-      "agent_type": "oh-my-claudecode:architect",
-      "started_at": "2026-02-12T07:58:26.747Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T07:59:46.446Z",
-      "duration_ms": 79699
-    },
-    {
-      "agent_id": "aea5fc8",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T08:10:01.396Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:11:15.069Z",
-      "duration_ms": 73673
-    },
-    {
-      "agent_id": "a3d7032",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T08:31:36.340Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:31:58.038Z",
-      "duration_ms": 21698
-    },
-    {
-      "agent_id": "a8e991c",
-      "agent_type": "oh-my-claudecode:executor-high",
-      "started_at": "2026-02-12T08:31:36.356Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:35:18.041Z",
-      "duration_ms": 221685
-    },
-    {
-      "agent_id": "a32d1f8",
-      "agent_type": "oh-my-claudecode:executor",
-      "started_at": "2026-02-12T08:31:36.402Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:32:02.247Z",
-      "duration_ms": 25845
-    },
-    {
-      "agent_id": "a3b5762",
-      "agent_type": "oh-my-claudecode:architect",
-      "started_at": "2026-02-12T08:38:09.003Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:40:56.942Z",
-      "duration_ms": 167939
-    },
-    {
-      "agent_id": "a560431",
-      "agent_type": "oh-my-claudecode:executor-low",
-      "started_at": "2026-02-12T08:41:14.875Z",
-      "parent_mode": "ultrawork",
-      "status": "failed",
-      "completed_at": "2026-02-12T08:42:03.931Z",
-      "duration_ms": 49056
+      "completed_at": "2026-02-12T09:13:28.079Z",
+      "duration_ms": 100989
     }
   ],
-  "total_spawned": 12,
+  "total_spawned": 2,
   "total_completed": 0,
-  "total_failed": 12,
-  "last_updated": "2026-02-12T08:45:19.184Z"
+  "total_failed": 2,
+  "last_updated": "2026-02-12T09:26:07.695Z"
 }

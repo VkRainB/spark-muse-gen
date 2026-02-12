@@ -3,6 +3,8 @@ import type { Message } from "../../../types";
 
 const props = defineProps<{
   messages: Message[];
+  status?: 'submitted' | 'streaming' | 'ready' | 'error';
+  streamingText?: string;
 }>();
 
 const emit = defineEmits<{
@@ -36,6 +38,23 @@ const lastUserMessageId = computed(() => {
   return null
 });
 
+// 流式输出时追加虚拟助手消息
+const displayMessages = computed(() => {
+  const base = chatMessages.value
+  if (props.status === 'streaming' && props.streamingText) {
+    return [
+      ...base,
+      {
+        id: '__streaming__',
+        role: 'assistant' as const,
+        parts: [{ type: 'text' as const, text: props.streamingText }],
+        _raw: null,
+      }
+    ]
+  }
+  return base
+})
+
 const getImageSrc = (image: { data: string; mimeType: string }) => {
   if (image.data.startsWith("data:") || image.data.startsWith("http")) {
     return image.data;
@@ -66,7 +85,8 @@ defineExpose({ scrollToBottom });
 <template>
   <div class="message-list-wrapper">
     <UChatMessages
-      :messages="chatMessages"
+      :messages="displayMessages"
+      :status="props.status"
       should-auto-scroll
       :ui="{
         viewport: 'max-w-[var(--content-max-width,860px)] mx-auto',
@@ -123,7 +143,7 @@ defineExpose({ scrollToBottom });
       </template>
 
       <template #actions="{ message }">
-        <div class="msg-actions-row">
+        <div v-if="message.id !== '__streaming__'" class="msg-actions-row">
           <UButton
             size="xs"
             color="neutral"

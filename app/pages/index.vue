@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const chat = useChat();
+const { isGenerating, streamingText } = useImageGeneration();
 const { isMobile } = useDevice();
 
 const messageListRef = ref<{ scrollToBottom: () => void }>();
@@ -11,6 +12,12 @@ const chatInputBridge = useState<{
 }>("chat-input-bridge", () => ({ prompt: "", send: false, nonce: 0 }));
 
 const promptDrawerOpen = inject<Ref<boolean>>("promptDrawerOpen")!;
+
+const chatStatus = computed(() => {
+  if (!isGenerating.value) return 'ready' as const
+  if (streamingText.value) return 'streaming' as const
+  return 'submitted' as const
+});
 
 // 监听消息变化，自动滚动
 watch(
@@ -95,6 +102,8 @@ const handleResend = (message: any) => {
           v-else
           ref="messageListRef"
           :messages="chat.currentMessages.value"
+          :status="chatStatus"
+          :streaming-text="streamingText"
           class="messages-area"
           @resend="handleResend"
         />
