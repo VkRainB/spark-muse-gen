@@ -135,6 +135,9 @@ const sendMessage = async () => {
     }
 
     emit("generated", generatedImages);
+  } else if (result.success && result.text) {
+    // 文本回复（没有图片）
+    chat.addAssistantMessage(result.text);
   }
 };
 
@@ -174,6 +177,9 @@ const resendMessage = async () => {
     }
 
     emit("generated", generatedImages);
+  } else if (result.success && result.text) {
+    // 文本回复（没有图片）
+    chat.addAssistantMessage(result.text);
   }
 };
 

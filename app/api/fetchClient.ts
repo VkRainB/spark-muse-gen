@@ -195,8 +195,13 @@ function dispatchSSEEvent(
     case SSEEvent.ERROR:
       return { error: json };
 
-    default:
-      break;
+    default: {
+      // 兼容标准 OpenAI SSE 格式（event 字段为空）
+      const { text: defaultText, reasoning: defaultReasoning } = extractDelta(json)
+      if (defaultReasoning) queue.push({ event: SSEEvent.FAST_ANSWER, reasoningText: defaultReasoning })
+      if (defaultText) queue.push({ event: SSEEvent.FAST_ANSWER, text: defaultText })
+      break
+    }
   }
 
   return null;
