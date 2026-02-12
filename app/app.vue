@@ -10,7 +10,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <UApp>
+  <UApp :toaster="{ position: 'top-center', duration: 2000 }">
     <NuxtLayout>
       <NuxtPage :keepalive="{ max: 10 }" />
     </NuxtLayout>

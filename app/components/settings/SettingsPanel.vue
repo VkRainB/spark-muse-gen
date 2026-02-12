@@ -38,9 +38,9 @@ const handleAddChannelClick = () => {
         <h3 class="config-label-lg">外观与主题</h3>
       </header>
 
-      <UFormField label="主题模式" class="field-row">
+      <div class="field-row">
         <SettingsThemeSwitch />
-      </UFormField>
+      </div>
     </section>
 
     <section class="config-card">
@@ -51,13 +51,13 @@ const handleAddChannelClick = () => {
         <h3 class="config-label-lg">对话与生成</h3>
       </header>
 
-      <UFormField label="流式传输" class="field-row">
-        <div class="switch-row">
-          <USwitch :model-value="settingsStore.streamEnabled" @update:model-value="settingsStore.toggleStream()" />
-        </div>
-      </UFormField>
+      <div class="inline-field-row">
+        <span class="inline-label">流式传输</span>
+        <USwitch :model-value="settingsStore.streamEnabled" @update:model-value="settingsStore.toggleStream()" />
+      </div>
 
-      <UFormField label="上下文消息数" class="field-row">
+      <div class="inline-field-row">
+        <span class="inline-label">上下文消息数</span>
         <div class="slider-row">
           <input
             type="range"
@@ -69,40 +69,36 @@ const handleAddChannelClick = () => {
           />
           <span class="slider-value">{{ settingsStore.contextCount }}</span>
         </div>
-      </UFormField>
+      </div>
     </section>
 
     <section class="config-card">
-      <header class="card-header">
-        <span class="card-icon">
-          <UIcon name="i-heroicons-folder-open" class="w-4 h-4" />
-        </span>
-        <h3 class="config-label-lg">本地存储</h3>
+      <header class="card-header card-header-between">
+        <div class="card-title-group">
+          <span class="card-icon">
+            <UIcon name="i-heroicons-folder-open" class="w-4 h-4" />
+          </span>
+          <h3 class="config-label-lg">本地存储</h3>
+        </div>
+        <USwitch v-if="isSupported" :model-value="isEnabled" @update:model-value="handleAutoSaveToggle" />
       </header>
 
       <div v-if="!isSupported" class="notice-warning">
         当前浏览器不支持本地自动保存（需 Chrome/Edge 86+）。
       </div>
 
-      <template v-else>
-        <UFormField label="自动保存到本地" class="field-row">
-          <div class="auto-save-row">
-            <div class="switch-row">
-              <USwitch :model-value="isEnabled" @update:model-value="handleAutoSaveToggle" />
-              <span v-if="isEnabled" class="field-value">{{ directoryName }}</span>
-            </div>
-            <UButton
-              icon="i-heroicons-folder-open"
-              variant="outline"
-              size="xs"
-              class="dir-btn"
-              @click="handleSelectDirectoryClick"
-            >
-              {{ isEnabled ? '更换目录' : '选择目录' }}
-            </UButton>
-          </div>
-        </UFormField>
-      </template>
+      <div v-else-if="isEnabled" class="inline-field-row">
+        <span class="inline-label field-value">{{ directoryName }}</span>
+        <UButton
+          icon="i-heroicons-folder-open"
+          variant="outline"
+          size="xs"
+          class="dir-btn"
+          @click="handleSelectDirectoryClick"
+        >
+          更换目录
+        </UButton>
+      </div>
     </section>
 
     <section class="config-card">
@@ -179,6 +175,20 @@ const handleAddChannelClick = () => {
   justify-content: center;
   color: var(--primary-color);
   background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+  flex-shrink: 0;
+}
+
+.inline-field-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.inline-label {
+  font-size: 12px;
+  color: var(--text-sub);
   flex-shrink: 0;
 }
 

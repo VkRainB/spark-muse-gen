@@ -286,22 +286,13 @@ const formatTime = (timestamp: number) => {
       </section>
     </div>
 
-    <UModal v-model:open="isDeleteModalOpen">
-      <template #content>
-        <div class="delete-modal">
-          <div class="delete-title">删除提示词？</div>
-          <div class="delete-desc">删除后无法恢复。</div>
-          <div class="delete-actions">
-            <UButton color="neutral" variant="ghost" @click="deletingId = null">
-              取消
-            </UButton>
-            <UButton color="error" @click="confirmDelete">
-              确认删除
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <UiConfirmDialog
+      v-model:open="isDeleteModalOpen"
+      title="删除提示词？"
+      description="删除后无法恢复。"
+      confirm-text="确认删除"
+      @confirm="confirmDelete"
+    />
   </div>
 </template>
 
@@ -454,27 +445,6 @@ const formatTime = (timestamp: number) => {
   justify-content: center;
   flex-direction: column;
   color: var(--text-sub);
-  gap: 8px;
-}
-
-.delete-modal {
-  padding: 20px;
-}
-
-.delete-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.delete-desc {
-  margin-top: 8px;
-  color: var(--text-sub);
-}
-
-.delete-actions {
-  margin-top: 18px;
-  display: flex;
-  justify-content: flex-end;
   gap: 8px;
 }
 

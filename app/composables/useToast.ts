@@ -8,7 +8,9 @@ export function useAppToast() {
       title,
       description,
       color: 'success' as const,
-      icon: 'i-heroicons-check-circle'
+      icon: 'i-heroicons-check-circle',
+      close: false,
+      progress: false
     })
   }
 
@@ -17,7 +19,9 @@ export function useAppToast() {
       title,
       description,
       color: 'error' as const,
-      icon: 'i-heroicons-x-circle'
+      icon: 'i-heroicons-x-circle',
+      close: false,
+      progress: false
     })
   }
 
@@ -26,7 +30,9 @@ export function useAppToast() {
       title,
       description,
       color: 'warning' as const,
-      icon: 'i-heroicons-exclamation-triangle'
+      icon: 'i-heroicons-exclamation-triangle',
+      close: false,
+      progress: false
     })
   }
 
@@ -35,7 +41,9 @@ export function useAppToast() {
       title,
       description,
       color: 'info' as const,
-      icon: 'i-heroicons-information-circle'
+      icon: 'i-heroicons-information-circle',
+      close: false,
+      progress: false
     })
   }
 

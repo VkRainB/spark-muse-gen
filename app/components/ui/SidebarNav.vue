@@ -53,11 +53,6 @@ const confirmClearAllSessions = () => {
   closeSessionDrawer();
 };
 
-// 取消清空
-const cancelClearAllSessions = () => {
-  showClearConfirm.value = false;
-};
-
 // 工具卡片数据
 const toolCards = [
   {
@@ -334,24 +329,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <UModal v-model:open="showClearConfirm">
-      <template #content>
-        <div class="clear-confirm-modal">
-          <div class="clear-confirm-title">清空所有对话？</div>
-          <div class="clear-confirm-desc">
-            此操作不可撤销，所有会话记录将被永久删除。
-          </div>
-          <div class="clear-confirm-actions">
-            <UButton color="neutral" variant="ghost" @click="cancelClearAllSessions">
-              取消
-            </UButton>
-            <UButton color="error" @click="confirmClearAllSessions">
-              确认清空
-            </UButton>
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <UiConfirmDialog
+      v-model:open="showClearConfirm"
+      title="清空所有对话？"
+      description="此操作不可撤销，所有会话记录将被永久删除。"
+      confirm-text="确认清空"
+      @confirm="confirmClearAllSessions"
+    />
   </div>
 </template>
 
@@ -504,29 +488,5 @@ onUnmounted(() => {
   padding: 20px;
   color: var(--text-sub);
   font-size: 13px;
-}
-
-.clear-confirm-modal {
-  padding: 20px;
-}
-
-.clear-confirm-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-.clear-confirm-desc {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-sub);
-}
-
-.clear-confirm-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
 }
 </style>

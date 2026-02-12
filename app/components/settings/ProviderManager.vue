@@ -28,6 +28,8 @@ const modelOptions = ref<string[]>([])
 const modelFetchError = ref<string | null>(null)
 const showApiKey = ref(false)
 const submitAttempted = ref(false)
+const deleteConfirmId = ref<string | null>(null)
+const showDeleteConfirm = ref(false)
 
 const isEditing = computed(() => editingProviderId.value !== null)
 
@@ -298,6 +300,20 @@ const loadModels = async (silent = false) => {
   }
 }
 
+const handleDeleteClick = (id: string) => {
+  deleteConfirmId.value = id
+  showDeleteConfirm.value = true
+}
+
+const handleDeleteConfirm = () => {
+  if (deleteConfirmId.value) {
+    removeProvider(deleteConfirmId.value)
+    toast.success('渠道已删除')
+  }
+  showDeleteConfirm.value = false
+  deleteConfirmId.value = null
+}
+
 watch(showModal, (open) => {
   if (open) return
   editingProviderId.value = null
@@ -328,16 +344,16 @@ watch(showModal, (open) => {
       <div
         v-for="provider in providers"
         :key="provider.id"
-        class="flex items-center justify-between p-4 border rounded-lg dark:border-gray-700"
+        class="provider-card"
       >
-        <div class="flex items-center gap-4">
+        <div class="provider-row provider-row-between">
+          <span class="provider-name">{{ provider.name }}</span>
           <USwitch :model-value="provider.enabled" @update:model-value="toggleProvider(provider.id)" />
-          <div>
-            <p class="font-medium">{{ provider.name }}</p>
-            <p class="text-sm text-gray-500">{{ provider.type }} · {{ provider.model }}</p>
-          </div>
         </div>
-        <div class="flex gap-2">
+        <div class="provider-row">
+          <span class="provider-model">{{ provider.type }} · {{ provider.model }}</span>
+        </div>
+        <div class="provider-row provider-row-end">
           <UButton
             icon="i-heroicons-pencil-square"
             size="xs"
@@ -358,7 +374,7 @@ watch(showModal, (open) => {
             size="xs"
             color="error"
             variant="ghost"
-            @click="removeProvider(provider.id)"
+            @click="handleDeleteClick(provider.id)"
           />
         </div>
       </div>
@@ -508,5 +524,64 @@ watch(showModal, (open) => {
         </div>
       </template>
     </UModal>
+
+    <!-- 删除确认弹窗 -->
+    <UiConfirmDialog
+      v-model:open="showDeleteConfirm"
+      title="确认删除"
+      description="删除后无法恢复，确定要删除该渠道吗？"
+      confirm-text="确认删除"
+      @confirm="handleDeleteConfirm"
+    />
   </div>
 </template>
+
+<style scoped>
+.provider-card {
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+
+.provider-card:hover {
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+}
+
+.provider-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.provider-row-between {
+  justify-content: space-between;
+}
+
+.provider-row-end {
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.provider-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.provider-model {
+  font-size: 11px;
+  color: var(--text-sub);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+</style>
