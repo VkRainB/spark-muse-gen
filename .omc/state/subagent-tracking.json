@@ -1,0 +1,17 @@
+{
+  "agents": [
+    {
+      "agent_id": "afd9709",
+      "agent_type": "feature-dev:code-explorer",
+      "started_at": "2026-02-12T02:50:26.087Z",
+      "parent_mode": "ultrawork",
+      "status": "failed",
+      "completed_at": "2026-02-12T02:52:57.525Z",
+      "duration_ms": 151438
+    }
+  ],
+  "total_spawned": 1,
+  "total_completed": 0,
+  "total_failed": 1,
+  "last_updated": "2026-02-12T03:38:12.931Z"
+}

@@ -8,6 +8,7 @@ export interface Provider {
   model: string               // 模型名称
   enabled: boolean            // 是否启用
   createdAt: number           // 创建时间戳
+  weight: number              // 权重，数字越小优先级越高
 }
 
 // 渠道表单数据
@@ -17,4 +18,5 @@ export interface ProviderFormData {
   baseUrl: string
   apiKey: string
   model: string
+  weight: number
 }

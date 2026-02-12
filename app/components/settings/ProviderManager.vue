@@ -70,7 +70,8 @@ const formData = ref<ProviderFormData>({
   type: 'openai',
   baseUrl: getTypeDefaults('openai').baseUrl,
   apiKey: '',
-  model: getTypeDefaults('openai').model
+  model: getTypeDefaults('openai').model,
+  weight: 0
 })
 
 const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
@@ -88,7 +89,8 @@ const normalizeFormData = (data: ProviderFormData): ProviderFormData => ({
   type: data.type,
   baseUrl: data.baseUrl.trim(),
   apiKey: data.apiKey.trim(),
-  model: data.model.trim()
+  model: data.model.trim(),
+  weight: data.weight ?? 0
 })
 
 const isValidHttpUrl = (value: string) => {
@@ -161,7 +163,8 @@ const resetForm = (type: ProviderFormData['type'] = 'openai') => {
     type,
     baseUrl: defaults.baseUrl,
     apiKey: '',
-    model: defaults.model
+    model: defaults.model,
+    weight: 0
   }
 }
 
@@ -194,7 +197,8 @@ const openEditModal = (provider: Provider) => {
     type: provider.type,
     baseUrl: provider.baseUrl,
     apiKey: provider.apiKey,
-    model: provider.model
+    model: provider.model,
+    weight: provider.weight ?? 0
   }
   showModal.value = true
 
@@ -350,8 +354,9 @@ watch(showModal, (open) => {
           <span class="provider-name">{{ provider.name }}</span>
           <USwitch :model-value="provider.enabled" @update:model-value="toggleProvider(provider.id)" />
         </div>
-        <div class="provider-row">
+        <div class="provider-row provider-row-between">
           <span class="provider-model">{{ provider.type }} · {{ provider.model }}</span>
+          <span class="provider-weight">⚖️{{ provider.weight ?? 0 }}</span>
         </div>
         <div class="provider-row provider-row-end">
           <UButton
@@ -418,6 +423,13 @@ watch(showModal, (open) => {
                     <p class="text-xs text-gray-500">
                       {{ formData.type === 'gemini' ? '使用 Gemini 官方协议' : '使用 OpenAI 协议' }}
                     </p>
+                  </div>
+                </UFormField>
+
+                <UFormField label="权重">
+                  <div class="space-y-1.5">
+                    <UInput v-model.number="formData.weight" type="number" placeholder="0" />
+                    <p class="text-xs text-gray-500">数字越小优先级越高，随机模式下生效</p>
                   </div>
                 </UFormField>
               </div>
@@ -583,5 +595,15 @@ watch(showModal, (open) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.provider-weight {
+  font-size: 10px;
+  color: var(--text-sub);
+  background: color-mix(in srgb, var(--border-color) 30%, transparent);
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 </style>

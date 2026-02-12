@@ -1,7 +1,41 @@
 <script setup lang="ts">
+import { useProviderStore } from '../../stores/provider'
+
 const { isDark, toggleTheme } = useTheme();
 const chat = useChat();
 const route = useRoute();
+const providerStore = useProviderStore();
+
+const providerSelectorOpen = ref(false);
+
+const toggleProviderSelector = () => {
+  providerSelectorOpen.value = !providerSelectorOpen.value;
+};
+
+const closeProviderSelector = () => {
+  providerSelectorOpen.value = false;
+};
+
+const selectProvider = (id: string) => {
+  providerStore.setActiveProvider(id);
+  closeProviderSelector();
+};
+
+// 点击外部关闭下拉菜单
+const onClickOutside = (e: MouseEvent) => {
+  const target = e.target as HTMLElement;
+  if (!target.closest('.model-selector-wrapper')) {
+    closeProviderSelector();
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', onClickOutside);
+});
 
 const bananaToolOpen = ref(false);
 const customPromptToolOpen = ref(false);
@@ -163,29 +197,32 @@ provide("rightSidebarOpen", rightSidebarOpen);
       </button>
 
       <div class="brand-area">
-        <svg
-          class="brand-logo-small"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 48 48"
-        >
-          <path
-            fill="#EA4335"
-            d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
-          />
-          <path
-            fill="#4285F4"
-            d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
-          />
-          <path
-            fill="#FBBC05"
-            d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
-          />
-          <path
-            fill="#34A853"
-            d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"
-          />
-        </svg>
-        <span class="brand-text">Gemini 3 Pro</span>
+        <div class="model-selector-wrapper">
+          <button class="model-selector" title="切换渠道" @click="toggleProviderSelector">
+            <span>{{ providerStore.activeDisplayName }}</span>
+            <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 opacity-60" :class="{ 'rotate-180': providerSelectorOpen }" />
+          </button>
+          <div v-if="providerSelectorOpen" class="provider-dropdown">
+            <button
+              class="provider-dropdown-item"
+              :class="{ active: providerStore.activeProviderId === 'random' }"
+              @click="selectProvider('random')"
+            >
+              <span class="provider-dropdown-name">🎲 随机优选</span>
+              <span class="provider-dropdown-desc">按权重自动选择</span>
+            </button>
+            <button
+              v-for="p in providerStore.enabledProviders"
+              :key="p.id"
+              class="provider-dropdown-item"
+              :class="{ active: providerStore.activeProviderId === p.id }"
+              @click="selectProvider(p.id)"
+            >
+              <span class="provider-dropdown-name">{{ p.name }}</span>
+              <span class="provider-dropdown-desc">{{ p.type }} · {{ p.model }}</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="header-actions">
@@ -253,9 +290,31 @@ provide("rightSidebarOpen", rightSidebarOpen);
               class="w-5 h-5"
             />
           </button>
-          <div class="model-selector" title="当前模型">
-            <span>Gemini 3 Pro Preview</span>
-            <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 opacity-60" />
+          <div class="model-selector-wrapper">
+            <button class="model-selector" title="切换渠道" @click="toggleProviderSelector">
+              <span>{{ providerStore.activeDisplayName }}</span>
+              <UIcon name="i-heroicons-chevron-down" class="w-4 h-4 opacity-60" :class="{ 'rotate-180': providerSelectorOpen }" />
+            </button>
+            <div v-if="providerSelectorOpen" class="provider-dropdown">
+              <button
+                class="provider-dropdown-item"
+                :class="{ active: providerStore.activeProviderId === 'random' }"
+                @click="selectProvider('random')"
+              >
+                <span class="provider-dropdown-name">🎲 随机优选</span>
+                <span class="provider-dropdown-desc">按权重自动选择</span>
+              </button>
+              <button
+                v-for="p in providerStore.enabledProviders"
+                :key="p.id"
+                class="provider-dropdown-item"
+                :class="{ active: providerStore.activeProviderId === p.id }"
+                @click="selectProvider(p.id)"
+              >
+                <span class="provider-dropdown-name">{{ p.name }}</span>
+                <span class="provider-dropdown-desc">{{ p.type }} · {{ p.model }}</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -601,6 +660,10 @@ provide("rightSidebarOpen", rightSidebarOpen);
   }
 }
 
+.model-selector-wrapper {
+  position: relative;
+}
+
 .model-selector {
   display: inline-flex;
   align-items: center;
@@ -613,10 +676,67 @@ provide("rightSidebarOpen", rightSidebarOpen);
   font-weight: 600;
   line-height: 1;
   user-select: none;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
 }
 
-.model-selector:hover {
-  background: color-mix(in srgb, var(--bg-input-area) 75%, var(--border-color));
+
+.model-selector .rotate-180 {
+  transform: rotate(180deg);
+  transition: transform 0.2s ease;
+}
+
+.provider-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  z-index: 200;
+  padding: 4px;
+}
+
+.provider-dropdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.provider-dropdown-item:hover {
+  background: var(--bg-tertiary);
+}
+
+.provider-dropdown-item.active {
+  background: var(--accent-blue-bg);
+}
+
+.provider-dropdown-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.provider-dropdown-item.active .provider-dropdown-name {
+  color: var(--accent-blue);
+}
+
+.provider-dropdown-desc {
+  font-size: 11px;
+  color: var(--text-sub);
 }
 
 .settings-sidebar {

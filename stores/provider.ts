@@ -34,12 +34,22 @@ interface OpenAIModelsResponse {
 
 export const useProviderStore = defineStore('provider', {
   state: () => ({
-    providers: [] as Provider[]
+    providers: [] as Provider[],
+    activeProviderId: 'random' as string
   }),
 
   getters: {
     enabledProviders: (state): Provider[] => state.providers.filter((p: Provider) => p.enabled),
-    hasProviders: (state): boolean => state.providers.length > 0
+    hasProviders: (state): boolean => state.providers.length > 0,
+    activeProvider: (state): Provider | null => {
+      if (state.activeProviderId === 'random') return null
+      return state.providers.find((p: Provider) => p.id === state.activeProviderId && p.enabled) ?? null
+    },
+    activeDisplayName: (state): string => {
+      if (state.activeProviderId === 'random') return '随机优选'
+      const provider = state.providers.find((p: Provider) => p.id === state.activeProviderId && p.enabled)
+      return provider ? provider.name : '随机优选'
+    }
   },
 
   actions: {
@@ -47,6 +57,7 @@ export const useProviderStore = defineStore('provider', {
       const provider: Provider = {
         id: crypto.randomUUID(),
         ...data,
+        weight: data.weight ?? 0,
         enabled: true,
         createdAt: Date.now()
       }
@@ -65,6 +76,7 @@ export const useProviderStore = defineStore('provider', {
             baseUrl: data.baseUrl ?? existing.baseUrl,
             apiKey: data.apiKey ?? existing.apiKey,
             model: data.model ?? existing.model,
+            weight: data.weight ?? existing.weight ?? 0,
             enabled: existing.enabled,
             createdAt: existing.createdAt
           }
@@ -76,6 +88,9 @@ export const useProviderStore = defineStore('provider', {
       const index = this.providers.findIndex((p: Provider) => p.id === id)
       if (index !== -1) {
         this.providers.splice(index, 1)
+        if (this.activeProviderId === id) {
+          this.activeProviderId = 'random'
+        }
       }
     },
 
@@ -83,13 +98,28 @@ export const useProviderStore = defineStore('provider', {
       const provider = this.providers.find((p: Provider) => p.id === id)
       if (provider) {
         provider.enabled = !provider.enabled
+        if (!provider.enabled && this.activeProviderId === id) {
+          this.activeProviderId = 'random'
+        }
       }
     },
 
     getRandomProvider(): Provider | null {
+      // If a specific provider is selected and enabled, use it
+      if (this.activeProviderId !== 'random') {
+        const active = this.providers.find((p: Provider) => p.id === this.activeProviderId && p.enabled)
+        if (active) return active
+      }
+      // Otherwise, use weight-based random selection
       const enabled = this.enabledProviders
       if (enabled.length === 0) return null
-      return enabled[Math.floor(Math.random() * enabled.length)] ?? null
+      const minWeight = Math.min(...enabled.map((p: Provider) => p.weight ?? 0))
+      const topPriority = enabled.filter((p: Provider) => (p.weight ?? 0) === minWeight)
+      return topPriority[Math.floor(Math.random() * topPriority.length)] ?? null
+    },
+
+    setActiveProvider(id: string) {
+      this.activeProviderId = id
     },
 
     async testProvider(id: string): Promise<boolean> {

@@ -22,7 +22,6 @@ export function useProvider() {
     const provider = store.providers.find((p: Provider) => p.id === id)
     if (!provider) return false
 
-    toast.info('测试中...', provider.name)
     const success = await store.testProvider(id)
 
     if (success) {
