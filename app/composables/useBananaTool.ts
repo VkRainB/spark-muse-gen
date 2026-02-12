@@ -93,18 +93,6 @@ export function useBananaTool() {
     isLoading.value = false
   }
 
-  // Search
-  const searchPrompts = (query: string): BananaPrompt[] => {
-    if (!query.trim()) return prompts.value
-
-    const lowerQuery = query.toLowerCase()
-    return prompts.value.filter(p =>
-      p.title.toLowerCase().includes(lowerQuery) ||
-      p.prompt.toLowerCase().includes(lowerQuery) ||
-      p.category.toLowerCase().includes(lowerQuery)
-    )
-  }
-
   // Filter by category
   const filterByCategory = (category: string): BananaPrompt[] => {
     if (!category || category === 'all') return prompts.value
@@ -129,10 +117,8 @@ export function useBananaTool() {
   return {
     prompts: readonly(prompts),
     isLoading: readonly(isLoading),
-    error: readonly(error),
     categories,
     loadPrompts,
-    searchPrompts,
     filterByCategory,
     refresh
   }
