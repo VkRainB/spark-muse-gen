@@ -5,7 +5,7 @@ const settingsStore = useSettingsStore()
 const { selectDirectory, isSupported, isEnabled, directoryName, disable } = useFileSystem()
 
 const handleAutoSaveToggle = async () => {
-  if (!settingsStore.autoSaveEnabled) {
+  if (!isEnabled.value) {
     await selectDirectory()
   } else {
     disable()
@@ -16,24 +16,46 @@ const handleContextChange = (event: Event) => {
   const target = event.target as HTMLInputElement
   settingsStore.setContextCount(Number(target.value))
 }
+
+const handleSelectDirectoryClick = async () => {
+  await selectDirectory()
+}
+
+const providerManagerRef = ref<{ openAddModal: () => void } | null>(null)
+
+const handleAddChannelClick = () => {
+  providerManagerRef.value?.openAddModal()
+}
 </script>
 
 <template>
   <div class="settings-panel">
-    <section class="config-group">
-      <h3 class="config-label-lg">生成设置</h3>
-      <p class="config-tip">分辨率和长宽比已移至聊天输入框上方，可在输入区直接快速调整。</p>
+    <section class="config-card">
+      <header class="card-header">
+        <span class="card-icon">
+          <UIcon name="i-heroicons-paint-brush" class="w-4 h-4" />
+        </span>
+        <h3 class="config-label-lg">外观与主题</h3>
+      </header>
+
+      <UFormField label="主题模式" class="field-row">
+        <SettingsThemeSwitch />
+      </UFormField>
+    </section>
+
+    <section class="config-card">
+      <header class="card-header">
+        <span class="card-icon">
+          <UIcon name="i-heroicons-chat-bubble-left-right" class="w-4 h-4" />
+        </span>
+        <h3 class="config-label-lg">对话与生成</h3>
+      </header>
 
       <UFormField label="流式传输" class="field-row">
         <div class="switch-row">
           <USwitch :model-value="settingsStore.streamEnabled" @update:model-value="settingsStore.toggleStream()" />
-          <span class="field-value">{{ settingsStore.streamEnabled ? '已启用' : '已禁用' }}</span>
         </div>
       </UFormField>
-    </section>
-
-    <section class="config-group">
-      <h3 class="config-label-lg">对话设置</h3>
 
       <UFormField label="上下文消息数" class="field-row">
         <div class="slider-row">
@@ -50,43 +72,62 @@ const handleContextChange = (event: Event) => {
       </UFormField>
     </section>
 
-    <section class="config-group">
-      <h3 class="config-label-lg">自动保存</h3>
+    <section class="config-card">
+      <header class="card-header">
+        <span class="card-icon">
+          <UIcon name="i-heroicons-folder-open" class="w-4 h-4" />
+        </span>
+        <h3 class="config-label-lg">本地存储</h3>
+      </header>
 
       <div v-if="!isSupported" class="notice-warning">
-        您的浏览器不支持 File System Access API。请使用 Chrome 86+ 或 Edge 86+ 以启用自动保存功能。
+        当前浏览器不支持本地自动保存（需 Chrome/Edge 86+）。
       </div>
 
       <template v-else>
         <UFormField label="自动保存到本地" class="field-row">
-          <div class="switch-row">
-            <USwitch :model-value="isEnabled" @update:model-value="handleAutoSaveToggle" />
-            <span class="field-value">
-              {{ isEnabled ? `已启用 - ${directoryName}` : '已禁用' }}
-            </span>
+          <div class="auto-save-row">
+            <div class="switch-row">
+              <USwitch :model-value="isEnabled" @update:model-value="handleAutoSaveToggle" />
+              <span v-if="isEnabled" class="field-value">{{ directoryName }}</span>
+            </div>
+            <UButton
+              icon="i-heroicons-folder-open"
+              variant="outline"
+              size="xs"
+              class="dir-btn"
+              @click="handleSelectDirectoryClick"
+            >
+              {{ isEnabled ? '更换目录' : '选择目录' }}
+            </UButton>
           </div>
         </UFormField>
-
-        <UButton
-          v-if="!isEnabled"
-          icon="i-heroicons-folder-open"
-          variant="outline"
-          class="outline-btn"
-          @click="() => { void selectDirectory() }"
-        >
-          选择保存目录
-        </UButton>
       </template>
     </section>
 
-    <section class="config-group">
-      <h3 class="config-label-lg">外观</h3>
-      <UFormField label="主题" class="field-row">
-        <SettingsThemeSwitch />
-      </UFormField>
-    </section>
+    <section class="config-card">
+      <header class="card-header card-header-between">
+        <div class="card-title-group">
+          <span class="card-icon">
+            <UIcon name="i-heroicons-server-stack" class="w-4 h-4" />
+          </span>
+          <h3 class="config-label-lg">渠道管理</h3>
+        </div>
+        <UButton
+          icon="i-heroicons-plus"
+          size="xs"
+          color="neutral"
+          variant="outline"
+          @click="handleAddChannelClick"
+        >
+          添加渠道
+        </UButton>
+      </header>
 
-    <SettingsProviderManager />
+      <div class="provider-wrapper">
+        <SettingsProviderManager ref="providerManagerRef" :show-title="false" :show-add-button="false" />
+      </div>
+    </section>
   </div>
 </template>
 
@@ -94,43 +135,83 @@ const handleContextChange = (event: Event) => {
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 10px;
 }
 
-.config-group {
-  border-bottom: 1px solid color-mix(in srgb, var(--border-color) 75%, transparent);
-  padding-bottom: 16px;
+.config-card {
+  border: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
 }
 
 .config-label-lg {
   margin: 0;
-  display: block;
   font-size: 14px;
   font-weight: 700;
   color: var(--text-main);
 }
 
-.config-tip {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--text-sub);
-  line-height: 1.5;
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header-between {
+  justify-content: space-between;
+}
+
+.card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.card-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  background: color-mix(in srgb, var(--primary-color) 16%, transparent);
+  flex-shrink: 0;
 }
 
 .field-row {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .switch-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  min-width: 0;
 }
 
 .field-value {
   font-size: 12px;
   color: var(--text-sub);
-  line-height: 1.4;
+  line-height: 1.2;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.auto-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dir-btn {
+  flex-shrink: 0;
 }
 
 .slider-row {
@@ -179,14 +260,14 @@ const handleContextChange = (event: Event) => {
 }
 
 .notice-warning {
-  margin-top: 12px;
+  margin-top: 10px;
   border-radius: 10px;
   border: 1px solid #fde68a;
   background: #fef9c3;
   color: #92400e;
-  font-size: 12px;
-  line-height: 1.6;
-  padding: 10px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  padding: 8px 10px;
 }
 
 :deep(.dark) .notice-warning {
@@ -195,10 +276,8 @@ const handleContextChange = (event: Event) => {
   color: #fef08a;
 }
 
-.outline-btn {
+.provider-wrapper {
   margin-top: 10px;
-  width: 100%;
-  justify-content: center;
 }
 
 :deep(.ui-form-field-label) {

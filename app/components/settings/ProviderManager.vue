@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import type { Provider, ProviderFormData } from '../../../types/provider'
 
+const props = withDefaults(defineProps<{
+  showTitle?: boolean
+  showAddButton?: boolean
+}>(), {
+  showTitle: true,
+  showAddButton: true
+})
+
 const toast = useAppToast()
 const {
   providers,
@@ -169,6 +177,10 @@ const openAddModal = () => {
   showModal.value = true
 }
 
+defineExpose({
+  openAddModal
+})
+
 const openEditModal = (provider: Provider) => {
   editingProviderId.value = provider.id
   modelOptions.value = []
@@ -300,9 +312,13 @@ watch(showModal, (open) => {
 
 <template>
   <div class="space-y-4">
-    <div class="flex justify-between items-center">
-      <h3 class="text-lg font-semibold">API 渠道</h3>
-      <UButton icon="i-heroicons-plus" size="sm" @click="openAddModal">
+    <div
+      v-if="props.showTitle || props.showAddButton"
+      class="flex items-center"
+      :class="props.showTitle && props.showAddButton ? 'justify-between' : (props.showTitle ? 'justify-start' : 'justify-end')"
+    >
+      <h3 v-if="props.showTitle" class="text-lg font-semibold">API 渠道</h3>
+      <UButton v-if="props.showAddButton" icon="i-heroicons-plus" size="sm" @click="openAddModal">
         添加渠道
       </UButton>
     </div>

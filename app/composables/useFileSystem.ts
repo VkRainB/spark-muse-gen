@@ -5,7 +5,8 @@ export function useFileSystem() {
   const settingsStore = useSettingsStore()
 
   const isSupported = ref(false)
-  const directoryHandle = ref<FileSystemDirectoryHandle | null>(null)
+  // Use a shared state so every component reads the same selected directory.
+  const directoryHandle = useState<FileSystemDirectoryHandle | null>('auto-save-directory-handle', () => null)
 
   // 检测支持
   onMounted(() => {
@@ -15,6 +16,31 @@ export function useFileSystem() {
   const isEnabled = computed(() =>
     isSupported.value && settingsStore.autoSaveEnabled && directoryHandle.value !== null
   )
+
+  const ensureDirectoryPermission = async (): Promise<boolean> => {
+    if (!directoryHandle.value) return false
+
+    try {
+      const handle = directoryHandle.value as FileSystemDirectoryHandle & {
+        queryPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>
+        requestPermission?: (descriptor?: { mode?: 'read' | 'readwrite' }) => Promise<PermissionState>
+      }
+
+      if (!handle.queryPermission || !handle.requestPermission) {
+        return true
+      }
+
+      const descriptor = { mode: 'readwrite' as const }
+      let permission = await handle.queryPermission(descriptor)
+      if (permission !== 'granted') {
+        permission = await handle.requestPermission(descriptor)
+      }
+
+      return permission === 'granted'
+    } catch {
+      return false
+    }
+  }
 
   // 选择目录
   const selectDirectory = async (): Promise<boolean> => {
@@ -54,6 +80,12 @@ export function useFileSystem() {
     mimeType: string = 'image/png'
   ): Promise<boolean> => {
     if (!directoryHandle.value) {
+      return false
+    }
+
+    const hasPermission = await ensureDirectoryPermission()
+    if (!hasPermission) {
+      toast.warning('无法保存', '目录写入权限未授予')
       return false
     }
 
@@ -121,6 +153,8 @@ export function useFileSystem() {
 
     if (savedCount > 0) {
       toast.success('已保存', `${savedCount} 张图像已保存到本地`)
+    } else if (images.length > 0) {
+      toast.warning('自动保存失败', '请重新选择目录并授予写入权限')
     }
 
     return savedCount

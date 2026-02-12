@@ -17,7 +17,7 @@ const themeOptions = [
       :class="{ active: theme === option.value }"
       @click="setTheme(option.value as 'light' | 'dark' | 'system')"
     >
-      <UIcon :name="option.icon" class="w-3.5 h-3.5" />
+      <UIcon :name="option.icon" class="w-3 h-3" />
       <span>{{ option.label }}</span>
     </button>
   </div>
@@ -26,26 +26,26 @@ const themeOptions = [
 <style scoped>
 .theme-switcher-container {
   background: var(--bg-tertiary);
-  border-radius: 10px;
-  padding: 4px;
+  border-radius: 8px;
+  padding: 3px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
+  gap: 3px;
 }
 
 .theme-btn {
   border: none;
   background: transparent;
   color: var(--text-sub);
-  border-radius: 8px;
-  min-height: 32px;
-  padding: 6px 8px;
-  font-size: 12px;
+  border-radius: 6px;
+  min-height: 28px;
+  padding: 4px 6px;
+  font-size: 11px;
   font-weight: 500;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
