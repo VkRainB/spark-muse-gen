@@ -1,96 +1,121 @@
 # CLAUDE.md
 
-本文件为 Claude Code (claude.ai/code) 在此仓库中工作时提供指导。
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 项目概述
 
-Gemini 3 Pro Image Preview 是一个基于 Google Gemini 3 Pro 的现代化 AI 图像生成工作台。目前是纯前端应用（无需后端），完全在浏览器中运行。
+Gemini 3 Pro Image Preview — 基于 Google Gemini 3 Pro 的 AI 图像生成工作台。纯前端 SPA（无后端），完全在浏览器中运行。
 
-**当前状态**：`source/` 目录下的原生 JavaScript 单页应用
-**计划重构**：迁移到 Nuxt 4 + Vue 3 + Nuxt UI 4 + Tailwind CSS（详见 `doc/Refactor/`）
+项目包含两套代码：
+- **`source/`** — 旧版原生 JavaScript 单页应用（保留参考，不再主要开发）
+- **`app/`** — **当前主代码**，已迁移至 Nuxt 4 + Vue 3 + Nuxt UI 4 + Pinia + Tailwind CSS v4
 
 ## 开发命令
 
 ```bash
-# 启动本地开发服务器（当前原生 JS 版本）
-python -m http.server 8000
-# 或
-npx serve source
-# 或
-php -S localhost:8000 -t source
-
-# Nuxt 迁移后
-pnpm install
-pnpm dev
-pnpm build
-pnpm preview
+pnpm install          # 安装依赖
+pnpm dev              # 启动开发服务器 (localhost:3001)
+pnpm build            # 生产构建
+pnpm preview          # 预览生产构建
+pnpm generate         # 静态生成
 ```
+
+无测试框架、无 lint 配置。
 
 ## 架构
 
-### 当前结构（原生 JS）
+### 技术栈
+
+- **Nuxt 4**（`ssr: false` SPA 模式，`future.compatibilityVersion: 4`）
+- **Nuxt UI v4** — 组件库（UApp, UModal, USlideover, UIcon, UNotifications 等）
+- **Pinia v3** + `pinia-plugin-persistedstate` — 状态管理，数据持久化到 localStorage
+- **Tailwind CSS v4** — 通过 `@import "tailwindcss"` 引入
+- **@nuxtjs/color-mode** — 主题切换（system/light/dark）
+- **@fortaine/fetch-event-source** — SSE 流式传输
+- **marked** — Markdown 解析
+- **JSZip** — 批量下载压缩
+
+### 目录结构
 
 ```
-source/
-├── index.html      # 单页 HTML，包含所有 UI 组件
-├── app.js          # 所有业务逻辑（约 3000+ 行，单体架构）
-├── style.css       # 所有样式，使用 CSS 变量支持主题切换
-└── README.md       # 用户文档
+app/
+├── api/fetchClient.ts        # API 请求客户端
+├── components/
+│   ├── chat/                  # 聊天界面（InputArea, InputBar, MessageItem, MessageList, QuickPromptPanel）
+│   ├── image/                 # 图像生成（ImageGenerator）
+│   ├── settings/              # 设置（ProviderManager, SettingsPanel, ThemeSwitch）
+│   ├── tools/                 # 工具（BananaTool, CustomPromptTool, SlicerTool, StickerMode）
+│   └── ui/                    # 通用 UI（ConfirmDialog, Lightbox, Loading, SidebarNav, SmartProgressBar）
+├── composables/               # 13 个组合式函数（见下方）
+├── layouts/default.vue        # 主布局：侧边栏导航 + 设置面板 + 工具模态框
+├── pages/                     # 3 个页面路由
+│   ├── index.vue              # 主聊天/图像生成页
+│   ├── settings.vue           # 设置页
+│   └── xhs.vue                # 小红书内容创作页
+├── plugins/
+│   ├── pinia-persist.client.ts    # Pinia 持久化插件注册
+│   └── vue-warn-filter.client.ts  # 过滤 Suspense 实验性警告
+└── utils/                     # 工具函数（base64, blob, download, escapeHtml）
+
+stores/                        # Pinia stores（在 app/ 外，通过 nuxt.config pinia.storesDirs 配置）
+├── chat.ts                    # 会话和消息管理
+├── prompts.ts                 # 自定义提示词
+├── provider.ts                # API 渠道配置
+├── settings.ts                # 应用设置
+└── xhs.ts                     # 小红书相关状态
+
+types/                         # TypeScript 类型定义
+├── chat.d.ts, image.d.ts, provider.d.ts, xhs.d.ts, index.d.ts
 ```
 
-### app.js 核心模块
+### 关键架构模式
 
-| 模块 | 职责 |
-|------|------|
-| `ProviderManager` | 多渠道 API 配置（Gemini 原生接口 / OpenAI 兼容接口） |
-| `FileSystemManager` | File System Access API 实现本地自动保存 |
-| `XHSCreator` | 小红书内容创作工具 |
-| `BananaTool` | 集成 banana-prompt-quicker 提示词库 |
-| `CustomPromptTool` | 个人提示词管理 |
-| `SlicerTool` | 图片切片/九宫格切图工具 |
-| `SmartProgressBar` | 根据分辨率智能估算进度 |
-| `LoadingManager` / `ErrorHandler` | UI 反馈系统 |
+**Composables 分层**：每个业务域对应一个 composable，封装逻辑与状态操作：
 
-### 数据存储
+| Composable | 职责 |
+|------------|------|
+| `useChat` | 会话管理、消息收发、流式响应处理 |
+| `useImageGeneration` | 图像生成请求、进度追踪 |
+| `useProvider` | 多渠道 API 提供者切换与配置 |
+| `useFileSystem` | File System Access API 本地自动保存 |
+| `useIndexedDB` | IndexedDB 数据库操作封装 |
+| `useBananaTool` | banana-prompt-quicker 提示词库集成 |
+| `useStickerMode` | 贴纸/表情包创作模式 |
+| `useSlicer` | 图片切片/九宫格工具 |
+| `useXHS` | 小红书内容创作 |
+| `useTheme` | 主题管理 |
+| `useLightbox` | 图片灯箱预览 |
+| `useToast` | 消息通知 |
+| `useDevice` | 设备检测（移动端/桌面端） |
 
-- **IndexedDB**：`GeminiProDB`（会话、消息）、`XHSHistoryDB`（创作历史）
-- **localStorage**：API 渠道配置、主题、设置、自定义提示词
+**跨组件通信**：
+- `useState("chat-input-bridge")` — 布局与聊天组件间的输入桥接
+- `useState("left-sidebar-collapsed")` — 侧边栏折叠状态
+- `provide/inject` — 布局向子组件注入侧边栏控制函数
 
-### 外部依赖（CDN）
-
-- `marked.js` - Markdown 解析
-- `JSZip` - 批量下载文件压缩
-
-## 重构上下文
-
-迁移指南位于 `doc/Refactor/`：
-- `NUXT_MIGRATION_GUIDE.md` - 第一部分：项目结构、核心模块
-- `NUXT_MIGRATION_GUIDE_PART2.md` - 第二部分：组件、状态管理
-
-目标技术栈：**Nuxt 4 + Vue 3 + Nuxt UI 4 + Pinia + Tailwind CSS**
-
-## 关键模式
+**数据持久化**：
+- **Pinia + persistedstate** — stores 自动持久化到 localStorage
+- **IndexedDB** — `GeminiProDB`（会话、消息）、`XHSHistoryDB`（创作历史）
 
 ### API 集成
 
 支持两种接口类型：
-1. **Gemini 原生接口**：`generativelanguage.googleapis.com`
-2. **OpenAI 兼容接口**：标准 OpenAI API 格式，支持流式传输
+1. **Gemini 原生接口** — `generativelanguage.googleapis.com`
+2. **OpenAI 兼容接口** — 标准 OpenAI API 格式，支持 SSE 流式传输
 
-### 图像生成流程
+### Nuxt 配置要点
 
-```
-用户输入 → ProviderManager.getProvider() → API 请求 →
-processGeneration() → UI 渲染 → FileSystemManager.autoSave()
-```
+- `ssr: false` — 纯 SPA，无服务端渲染
+- `devServer.port: 3001`
+- Pinia stores 目录：`./stores/**`（在 `app/` 外部）
+- 别名：`~/stores` → `./stores`，`~/types` → `./types`
 
-### 分辨率预设
+## 文档
 
-- 1K：1024x1024（约 15 秒生成）
-- 2K：2048x2048（约 30 秒生成）
-- 4K：4096x4096（约 60 秒生成）
+- `doc/PRD.md` — 产品需求文档
+- `doc/Api/API_INTEGRATION_GUIDE.md` — API 集成指南
+- `doc/Refactor/` — Nuxt 迁移指南（NUXT_MIGRATION_GUIDE.md, NUXT_MIGRATION_GUIDE_PART2.md）
 
-## 浏览器要求
+## 旧版代码参考
 
-- Chrome 86+ / Edge 86+（完整功能，包括 File System Access API）
-- Firefox / Safari（仅核心功能，不支持自动保存）
+`source/` 目录保留原生 JS 版本供参考，包含 `app.js`（~3000+ 行单体）、`index.html`、`style.css`。新功能开发应在 `app/` Nuxt 项目中进行。
