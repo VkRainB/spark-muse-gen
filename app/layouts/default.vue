@@ -5,6 +5,7 @@ const { isDark, toggleTheme } = useTheme();
 const chat = useChat();
 const route = useRoute();
 const providerStore = useProviderStore();
+const { isMobile } = useDevice();
 
 const providerSelectorOpen = ref(false);
 
@@ -39,7 +40,6 @@ onUnmounted(() => {
 
 const bananaToolOpen = ref(false);
 const customPromptToolOpen = ref(false);
-const stickerToolOpen = ref(false);
 const slicerToolOpen = ref(false);
 const chatInputBridge = useState<{
   prompt: string;
@@ -82,18 +82,30 @@ const toggleLeftSidebarCollapse = () => {
   leftSidebarOpen.value = false;
 };
 
+// 关闭所有工具弹层 / 抽屉
+const closeToolModals = () => {
+  bananaToolOpen.value = false;
+  customPromptToolOpen.value = false;
+  slicerToolOpen.value = false;
+};
+
 // 切换右侧边栏（设置）
 const toggleSettings = () => {
   rightSidebarOpen.value = !rightSidebarOpen.value;
   if (rightSidebarOpen.value) {
     leftSidebarOpen.value = false;
     promptDrawerOpen.value = false;
+    closeToolModals();
   }
 };
 
 // 切换提示词抽屉
 const togglePromptDrawer = () => {
   promptDrawerOpen.value = !promptDrawerOpen.value;
+  if (promptDrawerOpen.value) {
+    rightSidebarOpen.value = false;
+    closeToolModals();
+  }
 };
 
 // 关闭所有侧边栏
@@ -101,6 +113,21 @@ const closeAllSidebars = () => {
   leftSidebarOpen.value = false;
   rightSidebarOpen.value = false;
 };
+
+// 工具抽屉/弹层 side（移动端从底部出，桌面右侧出）
+const slideoverSide = computed<'right' | 'bottom'>(() =>
+  isMobile.value ? 'bottom' : 'right'
+);
+const bananaSlideoverUi = computed(() =>
+  isMobile.value
+    ? { content: 'h-[90vh]' }
+    : { content: 'max-w-md w-[28rem]' }
+);
+const customSlideoverUi = computed(() =>
+  isMobile.value
+    ? { content: 'h-[90vh]' }
+    : { content: 'max-w-lg w-[32rem]' }
+);
 
 // 创建新会话
 const createNewSession = async () => {
@@ -111,20 +138,13 @@ const createNewSession = async () => {
   }
 };
 
-const closeToolModals = () => {
-  bananaToolOpen.value = false;
-  customPromptToolOpen.value = false;
-  stickerToolOpen.value = false;
-  slicerToolOpen.value = false;
-};
-
-const openToolModal = (tool: "banana" | "custom" | "sticker" | "slicer") => {
+const openToolModal = (tool: "banana" | "custom" | "slicer") => {
   closeToolModals();
   closeAllSidebars();
+  promptDrawerOpen.value = false;
 
   if (tool === "banana") bananaToolOpen.value = true;
   if (tool === "custom") customPromptToolOpen.value = true;
-  if (tool === "sticker") stickerToolOpen.value = true;
   if (tool === "slicer") slicerToolOpen.value = true;
 };
 
@@ -137,16 +157,22 @@ const openXHS = async () => {
   }
 };
 
+const openSticker = async () => {
+  closeToolModals();
+  closeAllSidebars();
+  promptDrawerOpen.value = false;
+
+  if (route.path !== "/sticker") {
+    await navigateTo("/sticker");
+  }
+};
+
 const openBananaTool = () => {
   openToolModal("banana");
 };
 
 const openCustomPromptTool = () => {
   openToolModal("custom");
-};
-
-const openStickerTool = () => {
-  openToolModal("sticker");
 };
 
 const openSlicerTool = () => {
@@ -287,7 +313,7 @@ provide("togglePromptDrawer", togglePromptDrawer);
         @open-xhs="openXHS"
         @open-banana="openBananaTool"
         @open-custom-prompt="openCustomPromptTool"
-        @open-sticker="openStickerTool"
+        @open-sticker="openSticker"
         @open-slicer="openSlicerTool"
       />
     </nav>
@@ -405,69 +431,35 @@ provide("togglePromptDrawer", togglePromptDrawer);
       </div>
     </aside>
 
-    <UModal v-model:open="bananaToolOpen">
-      <template #content>
-        <div class="tool-modal">
-          <div class="tool-modal-header">
-            <h3>提示词快查</h3>
-            <button class="tool-close-btn" @click="bananaToolOpen = false">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="tool-modal-body">
-            <ToolsBananaTool @apply="handleBananaApply" />
-          </div>
-        </div>
+    <USlideover
+      v-model:open="bananaToolOpen"
+      :side="slideoverSide"
+      title="提示词快查"
+      :ui="bananaSlideoverUi"
+    >
+      <template #body>
+        <ToolsBananaTool @apply="handleBananaApply" />
       </template>
-    </UModal>
+    </USlideover>
 
-    <UModal v-model:open="customPromptToolOpen">
-      <template #content>
-        <div class="tool-modal">
-          <div class="tool-modal-header">
-            <h3>我的提示词</h3>
-            <button class="tool-close-btn" @click="customPromptToolOpen = false">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="tool-modal-body">
-            <ToolsCustomPromptTool
-              @apply="handleCustomPromptApply"
-              @send="handleCustomPromptSend"
-            />
-          </div>
-        </div>
+    <USlideover
+      v-model:open="customPromptToolOpen"
+      :side="slideoverSide"
+      title="我的提示词"
+      :ui="customSlideoverUi"
+    >
+      <template #body>
+        <ToolsCustomPromptTool
+          @apply="handleCustomPromptApply"
+          @send="handleCustomPromptSend"
+        />
       </template>
-    </UModal>
-
-    <UModal v-model:open="stickerToolOpen">
-      <template #content>
-        <div class="tool-modal tool-modal-medium">
-          <div class="tool-modal-header">
-            <h3>制作表情包</h3>
-            <button class="tool-close-btn" @click="stickerToolOpen = false">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="tool-modal-body">
-            <ToolsStickerMode />
-          </div>
-        </div>
-      </template>
-    </UModal>
+    </USlideover>
 
     <UModal v-model:open="slicerToolOpen">
       <template #content>
         <div class="tool-modal tool-modal-medium">
-          <div class="tool-modal-header">
-            <h3>图片切片</h3>
-            <button class="tool-close-btn" @click="slicerToolOpen = false">
-              <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
-            </button>
-          </div>
-          <div class="tool-modal-body">
-            <ToolsSlicerTool />
-          </div>
+          <ToolsSlicerTool @close="slicerToolOpen = false" />
         </div>
       </template>
     </UModal>
@@ -837,6 +829,7 @@ provide("togglePromptDrawer", togglePromptDrawer);
 
 .tool-modal {
   width: min(1120px, calc(100vw - 28px));
+  height: min(90vh, 920px);
   max-height: min(90vh, 920px);
   display: flex;
   flex-direction: column;
@@ -849,46 +842,6 @@ provide("togglePromptDrawer", togglePromptDrawer);
 
 .tool-modal-medium {
   width: min(980px, calc(100vw - 28px));
-}
-
-.tool-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--border-color);
-  background: color-mix(in srgb, var(--bg-sidebar) 70%, var(--bg-body));
-}
-
-.tool-modal-header h3 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-.tool-close-btn {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: transparent;
-  border-radius: 8px;
-  color: var(--text-sub);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tool-close-btn:hover {
-  background: var(--hover-color);
-  color: var(--text-main);
-}
-
-.tool-modal-body {
-  padding: 14px 16px;
-  overflow: auto;
 }
 
 /* 滚动条样式 */
@@ -917,12 +870,9 @@ provide("togglePromptDrawer", togglePromptDrawer);
   .tool-modal,
   .tool-modal-medium {
     width: min(100vw - 16px, 100%);
+    height: min(92vh, 100%);
     max-height: min(92vh, 100%);
     border-radius: 12px;
-  }
-
-  .tool-modal-body {
-    padding: 10px;
   }
 }
 </style>

@@ -1,3 +1,6 @@
+import type { StickerImage } from '../../types/sticker'
+import { useStickerStore } from '../../stores/sticker'
+
 const EMOTIONS = [
   { id: 'happy', label: '开心', emoji: '😊' },
   { id: 'sad', label: '伤心', emoji: '😢' },
@@ -81,22 +84,42 @@ export function useStickerMode() {
     return result
   }
 
-  // 批量生成表情包
+  /**
+   * 批量生成表情包
+   * 内部接入 useStickerStore：每次调用会创建一个新批次，并在生成中边产边写入。
+   * 返回值保留旧契约（results 数组）+ 增加 batchId 字段，调用方按需使用。
+   */
   const generateStickerPack = async (
     character: string,
     selectedEmotions: string[],
     selectedActions: string[],
     background: 'white' | 'transparent' = 'white'
   ) => {
+    const stickerStore = useStickerStore()
+
+    const items = [
+      ...selectedEmotions.map(e => ({ type: 'emotion' as const, id: e })),
+      ...selectedActions.map(a => ({ type: 'action' as const, id: a }))
+    ]
+
+    if (items.length === 0) {
+      toast.warning('请先选择至少一个表情或动作')
+      return { batchId: null as string | null, results: [] }
+    }
+
+    // 创建批次（自动设为 currentBatch），返回 batchId 供调用方追踪
+    const batchId = stickerStore.createBatch({
+      character,
+      background,
+      emotions: [...selectedEmotions],
+      actions: [...selectedActions],
+    })
+
     const results: Array<{
-      type: string
+      type: 'emotion' | 'action'
       id: string
       images: Array<{ data: string; mimeType: string; id: string; createdAt: number }>
     }> = []
-    const items = [
-      ...selectedEmotions.map(e => ({ type: 'emotion', id: e })),
-      ...selectedActions.map(a => ({ type: 'action', id: a }))
-    ]
 
     toast.info('开始批量生成', `共 ${items.length} 个表情包`)
 
@@ -108,7 +131,18 @@ export function useStickerMode() {
       }
 
       const result = await generateSticker(options)
-      if (result.success) {
+      if (result.success && result.images.length > 0) {
+        // 边生成边写入 store（界面可实时刷新）
+        const stickerImages: StickerImage[] = result.images.map((img) => ({
+          id: img.id,
+          data: img.data,
+          mimeType: img.mimeType,
+          createdAt: img.createdAt,
+          emotionId: item.type === 'emotion' ? item.id : undefined,
+          actionId: item.type === 'action' ? item.id : undefined,
+        }))
+        stickerStore.addImagesToBatch(batchId, stickerImages)
+
         results.push({
           ...item,
           images: result.images
@@ -117,7 +151,7 @@ export function useStickerMode() {
     }
 
     toast.success('批量生成完成', `成功 ${results.length}/${items.length}`)
-    return results
+    return { batchId, results }
   }
 
   return {

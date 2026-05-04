@@ -65,7 +65,31 @@ const confirmClearAllSessions = () => {
 };
 
 // 工具卡片数据
-const toolCards = [
+type ToolGroup = 'workspace' | 'tool'
+type ToolFormIcon = 'navigate' | 'drawer' | 'modal'
+type ToolEventName =
+  | 'open-xhs'
+  | 'open-banana'
+  | 'open-custom-prompt'
+  | 'open-sticker'
+  | 'open-slicer'
+
+interface ToolCard {
+  id: string
+  title: string
+  desc: string
+  icon: string
+  colorClass: string
+  iconClass: string
+  group: ToolGroup
+  formIcon: ToolFormIcon
+  /** 工作台组使用：直接 NuxtLink 跳转 */
+  to?: string
+  /** 工具组使用：emit 给 layouts 处理 */
+  event?: ToolEventName
+}
+
+const toolCards: ToolCard[] = [
   {
     id: "xhs",
     title: "XHS 灵感实验室",
@@ -73,7 +97,22 @@ const toolCards = [
     icon: "i-heroicons-book-open",
     colorClass: "xhs-nav-card",
     iconClass: "xhs-icon",
-    event: "open-xhs" as const,
+    group: "workspace",
+    formIcon: "navigate",
+    to: "/xhs",
+    event: "open-xhs",
+  },
+  {
+    id: "sticker",
+    title: "表情包工坊",
+    desc: "批量生成 + 历史持久化",
+    icon: "i-heroicons-face-smile",
+    colorClass: "feature-nav-card",
+    iconClass: "feature-icon",
+    group: "workspace",
+    formIcon: "navigate",
+    to: "/sticker",
+    event: "open-sticker",
   },
   {
     id: "banana",
@@ -82,7 +121,9 @@ const toolCards = [
     icon: "i-heroicons-currency-dollar",
     colorClass: "banana-nav-card",
     iconClass: "banana-icon",
-    event: "open-banana" as const,
+    group: "tool",
+    formIcon: "drawer",
+    event: "open-banana",
   },
   {
     id: "custom",
@@ -91,16 +132,9 @@ const toolCards = [
     icon: "i-heroicons-document-text",
     colorClass: "custom-nav-card",
     iconClass: "custom-icon",
-    event: "open-custom-prompt" as const,
-  },
-  {
-    id: "sticker",
-    title: "制作表情包",
-    desc: "快速生成表情包",
-    icon: "i-heroicons-face-smile",
-    colorClass: "feature-nav-card",
-    iconClass: "feature-icon",
-    event: "open-sticker" as const,
+    group: "tool",
+    formIcon: "drawer",
+    event: "open-custom-prompt",
   },
   {
     id: "slicer",
@@ -109,18 +143,31 @@ const toolCards = [
     icon: "i-heroicons-scissors",
     colorClass: "tool-nav-card",
     iconClass: "tool-icon",
-    event: "open-slicer" as const,
+    group: "tool",
+    formIcon: "modal",
+    event: "open-slicer",
   },
 ];
 
-const handleToolClick = (
-  eventName:
-    | "open-xhs"
-    | "open-banana"
-    | "open-custom-prompt"
-    | "open-sticker"
-    | "open-slicer",
-) => {
+const workspaceCards = computed(() =>
+  toolCards.filter((t) => t.group === "workspace"),
+);
+const sideTools = computed(() =>
+  toolCards.filter((t) => t.group === "tool"),
+);
+
+const formIconName = (type: ToolFormIcon) => {
+  if (type === "navigate") return "i-heroicons-arrow-up-right";
+  if (type === "drawer") return "i-heroicons-rectangle-stack";
+  return "i-heroicons-square-2-stack";
+};
+const formIconTitle = (type: ToolFormIcon) => {
+  if (type === "navigate") return "点击跳转独立页面";
+  if (type === "drawer") return "点击打开右侧抽屉";
+  return "点击打开居中弹层";
+};
+
+const handleToolClick = (eventName: ToolEventName) => {
   (emit as (event: string) => void)(eventName);
 };
 
@@ -283,23 +330,69 @@ onUnmounted(() => {
       <span v-if="!props.collapsed">新建对话</span>
     </button>
 
-    <!-- 创作工具分组 -->
-    <div v-if="!props.collapsed" class="nav-section-title">创作工具</div>
-
-    <!-- 工具卡片 -->
-    <div
-      v-for="tool in toolCards"
+    <!-- 工作台分组（页面级，NuxtLink 跳转） -->
+    <div v-if="!props.collapsed && workspaceCards.length > 0" class="nav-section-title">
+      工作台
+    </div>
+    <NuxtLink
+      v-for="tool in workspaceCards"
       :key="tool.id"
+      :to="tool.to"
       class="nav-card"
       :class="tool.colorClass"
       :title="tool.title"
-      @click="handleToolClick(tool.event)"
     >
       <div class="nav-card-icon" :class="tool.iconClass">
         <UIcon :name="tool.icon" class="w-5 h-5" />
       </div>
       <div v-if="!props.collapsed" class="nav-card-content">
-        <div class="nav-card-title">{{ tool.title }}</div>
+        <div class="nav-card-title-row">
+          <span class="nav-card-title">{{ tool.title }}</span>
+          <span
+            class="form-icon"
+            :class="`form-icon-${tool.formIcon}`"
+            :title="formIconTitle(tool.formIcon)"
+          >
+            <UIcon :name="formIconName(tool.formIcon)" class="w-3 h-3" />
+          </span>
+        </div>
+        <div class="nav-card-desc">{{ tool.desc }}</div>
+      </div>
+    </NuxtLink>
+
+    <!-- 折叠状态下两组之间的细分隔线 -->
+    <div
+      v-if="props.collapsed && workspaceCards.length > 0 && sideTools.length > 0"
+      class="group-divider"
+      aria-hidden="true"
+    />
+
+    <!-- 工具分组（伴随主流程，emit 给 layouts 触发抽屉/弹层） -->
+    <div v-if="!props.collapsed && sideTools.length > 0" class="nav-section-title">
+      工具
+    </div>
+    <div
+      v-for="tool in sideTools"
+      :key="tool.id"
+      class="nav-card"
+      :class="tool.colorClass"
+      :title="tool.title"
+      @click="handleToolClick(tool.event!)"
+    >
+      <div class="nav-card-icon" :class="tool.iconClass">
+        <UIcon :name="tool.icon" class="w-5 h-5" />
+      </div>
+      <div v-if="!props.collapsed" class="nav-card-content">
+        <div class="nav-card-title-row">
+          <span class="nav-card-title">{{ tool.title }}</span>
+          <span
+            class="form-icon"
+            :class="`form-icon-${tool.formIcon}`"
+            :title="formIconTitle(tool.formIcon)"
+          >
+            <UIcon :name="formIconName(tool.formIcon)" class="w-3 h-3" />
+          </span>
+        </div>
         <div class="nav-card-desc">{{ tool.desc }}</div>
       </div>
     </div>
@@ -501,6 +594,62 @@ onUnmounted(() => {
 .sidebar-nav-content.collapsed :deep(.nav-card-icon) {
   width: 32px;
   height: 32px;
+}
+
+/* 形态角标：仅展开状态显示，折叠时隐藏 */
+.nav-card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.form-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  color: var(--text-tertiary, var(--text-sub));
+  background: color-mix(in srgb, var(--bg-tertiary) 60%, transparent);
+  flex-shrink: 0;
+}
+
+.form-icon-navigate {
+  color: var(--accent-blue);
+}
+
+.form-icon-drawer,
+.form-icon-modal {
+  color: var(--text-sub);
+}
+
+.sidebar-nav-content.collapsed .form-icon {
+  display: none;
+}
+
+.sidebar-nav-content.collapsed .nav-card-title-row {
+  display: contents;
+}
+
+/* 折叠状态下两组之间的细分隔线 */
+.group-divider {
+  width: 28px;
+  height: 1px;
+  margin: 6px auto;
+  background: color-mix(in srgb, var(--border-color) 60%, transparent);
+}
+
+/* NuxtLink 渲染成 a 标签时去除默认下划线 */
+a.nav-card {
+  text-decoration: none;
+}
+
+a.nav-card.router-link-active,
+a.nav-card.router-link-exact-active {
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 10%, var(--card-bg));
 }
 
 .collapsed-session-anchor {

@@ -155,13 +155,6 @@ const formatTime = (timestamp: number) => {
 
 <template>
   <div class="custom-prompt-tool">
-    <div class="tool-header">
-      <h3 class="text-lg font-semibold">我的提示词</h3>
-      <UButton color="neutral" variant="ghost" size="xs" @click="resetFilters">
-        重置筛选
-      </UButton>
-    </div>
-
     <div class="tool-layout">
       <section class="tool-panel form-panel">
         <div class="panel-title">
@@ -218,8 +211,17 @@ const formatTime = (timestamp: number) => {
             v-model="selectedCategory"
             :items="categoryOptions"
             value-key="value"
-            class="w-32"
+            class="list-filter"
           />
+          <UButton
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            title="重置筛选"
+            @click="resetFilters"
+          >
+            重置
+          </UButton>
         </div>
 
         <div v-if="filteredPrompts.length === 0" class="empty-block">
@@ -301,19 +303,23 @@ const formatTime = (timestamp: number) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.tool-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  height: 100%;
+  min-height: 0;
 }
 
 .tool-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  grid-template-columns: 1fr;  /* 抽屉/窄宽下单栏堆叠 */
   gap: 12px;
-  min-height: 480px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (min-width: 1280px) {
+  /* 仅当用在更宽的容器（如未来若移回 Modal）时才双栏 */
+  .tool-layout {
+    grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  }
 }
 
 .tool-panel {
@@ -321,6 +327,13 @@ const formatTime = (timestamp: number) => {
   border-radius: 12px;
   background: var(--card-bg);
   padding: 12px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.form-panel {
+  gap: 8px;
 }
 
 .panel-title {
@@ -359,8 +372,7 @@ const formatTime = (timestamp: number) => {
 }
 
 .list-panel {
-  display: flex;
-  flex-direction: column;
+  flex: 1;
   min-height: 0;
 }
 
@@ -368,14 +380,21 @@ const formatTime = (timestamp: number) => {
   display: flex;
   gap: 8px;
   margin-bottom: 10px;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.list-filter {
+  width: 110px;
+  flex-shrink: 0;
 }
 
 .prompt-list {
-  overflow-y: auto;
-  min-height: 0;
   flex: 1;
+  min-height: 0;
   display: grid;
   gap: 8px;
+  align-content: start;
   padding-right: 4px;
 }
 
@@ -439,22 +458,13 @@ const formatTime = (timestamp: number) => {
 }
 
 .empty-block {
-  min-height: 220px;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-direction: column;
   color: var(--text-sub);
   gap: 8px;
-}
-
-@media (max-width: 1024px) {
-  .tool-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .prompt-list {
-    max-height: 45vh;
-  }
+  padding: 32px 0;
 }
 </style>

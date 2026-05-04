@@ -15,6 +15,11 @@ export default defineNuxtConfig({
     pattern: ['**/*.vue', '!**/_components/**'] // 排除 pages 内的任意 _components
   },
 
+  // 路由规则：兜底已废弃路由（设置已收敛到右侧抽屉，/settings 不再使用）
+  routeRules: {
+    '/settings': { redirect: '/' }
+  },
+
   modules: [
     '@nuxtjs/color-mode',
     '@nuxt/ui',
