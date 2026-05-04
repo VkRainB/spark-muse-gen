@@ -77,9 +77,14 @@ export const useChatStore = defineStore('chat', {
       return newMessage
     },
 
-    // 移除当前会话最后一条助手回复（用于重新生成）
-    removeLastAssistantReply() {
-      const sessionMessages = this.currentMessages
+    // 移除指定会话最后一条助手回复（用于重新生成）；不传则使用当前会话
+    removeLastAssistantReply(sessionId?: string) {
+      const targetId = sessionId ?? this.currentSessionId
+      if (!targetId) return
+
+      const sessionMessages = this.messages.filter(
+        (m: Message) => m.sessionId === targetId
+      )
       if (sessionMessages.length === 0) return
 
       const lastMsg = sessionMessages[sessionMessages.length - 1]

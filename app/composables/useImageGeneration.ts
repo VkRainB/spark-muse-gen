@@ -165,23 +165,44 @@ const buildOpenAIContextMessages = (options: ImageGenerationOptions): OpenAIChat
   ]
 }
 
+// 用于不绑定具体 sessionId 的场景（sticker/xhs/全局兜底）
+const GLOBAL_KEY = '__global__'
+
 export function useImageGeneration() {
   const providerStore = useProviderStore()
   const toast = useAppToast()
 
-  // 使用 useState 确保所有组件共享同一份状态（单例）
-  const isGenerating = useState('img-gen-generating', () => false)
+  // 按 sessionId 隔离的状态：每条记录是某个会话当前是否在生成 / 流式文本 / 中止控制器
+  const generatingMap = useState<Record<string, boolean>>('img-gen-map', () => ({}))
+  const streamingTextMap = useState<Record<string, string>>('img-gen-streaming-map', () => ({}))
+  const streamingSessionId = useState<string | null>('img-gen-streaming-sid', () => null)
+  const abortControllers = useState<Record<string, AbortController | null>>('img-gen-abort-map', () => ({}))
+
+  // 全局共享（非聊天场景使用）：进度、当前任务描述、错误
   const progress = useState('img-gen-progress', () => 0)
   const currentTask = useState<string | null>('img-gen-task', () => null)
   const error = useState<string | null>('img-gen-error', () => null)
-  const abortController = useState<AbortController | null>('img-gen-abort', () => null)
-  const streamingText = useState('img-gen-streaming', () => '')
+
+  // 全局 isGenerating：任意会话在生成时为 true（向后兼容 sticker/xhs 等场景）
+  const isGenerating = computed(() =>
+    Object.values(generatingMap.value).some(Boolean)
+  )
+
+  const isSessionGenerating = (sessionId?: string | null) => {
+    if (!sessionId) return false
+    return Boolean(generatingMap.value[sessionId])
+  }
+
+  const getStreamingText = (sessionId?: string | null) => {
+    if (!sessionId) return ''
+    return streamingTextMap.value[sessionId] || ''
+  }
 
   // 模拟进度 - 使用缓动函数
-  const simulateProgress = (estimatedTime: number) => {
+  const simulateProgress = (estimatedTime: number, key: string) => {
     const startTime = Date.now()
     const interval = setInterval(() => {
-      if (!isGenerating.value) {
+      if (!generatingMap.value[key]) {
         clearInterval(interval)
         return
       }
@@ -385,15 +406,21 @@ export function useImageGeneration() {
       return { success: false, images: [] }
     }
 
-    isGenerating.value = true
+    // 锁定本次生成的目标会话；未传 sessionId 时使用全局 key（sticker/xhs 等场景）
+    const key = options.sessionId || GLOBAL_KEY
+    const ctrl = new AbortController()
+
+    generatingMap.value = { ...generatingMap.value, [key]: true }
+    abortControllers.value = { ...abortControllers.value, [key]: ctrl }
+    streamingTextMap.value = { ...streamingTextMap.value, [key]: '' }
+    streamingSessionId.value = key
+
     progress.value = 0
     currentTask.value = '正在生成图像...'
     error.value = null
-    abortController.value = new AbortController()
-    streamingText.value = ''
 
     const config = RESOLUTION_MAP[options.resolution] ?? RESOLUTION_MAP['1K']!
-    const stopProgress = simulateProgress(config.estimatedTime)
+    const stopProgress = simulateProgress(config.estimatedTime, key)
 
     try {
       let images: GeneratedImage[] = []
@@ -417,7 +444,7 @@ export function useImageGeneration() {
         }>({
           url,
           data: body as Record<string, any>,
-          abortCtrl: abortController.value,
+          abortCtrl: ctrl,
           timeout: config.estimatedTime * 2 * 1000
         })
 
@@ -433,12 +460,16 @@ export function useImageGeneration() {
           headers: {
             'Authorization': `Bearer ${provider.apiKey}`
           },
-          abortCtrl: abortController.value,
+          abortCtrl: ctrl,
           timeout: config.estimatedTime * 2 * 1000,
           onMessage: (item: SSEMessageItem) => {
-            // 实时更新流式文本（打字机效果）
+            // 实时更新流式文本（打字机效果），严格写回锁定的 key
             if (item.text) {
-              streamingText.value += item.text
+              const prev = streamingTextMap.value[key] || ''
+              streamingTextMap.value = {
+                ...streamingTextMap.value,
+                [key]: prev + item.text
+              }
             }
           }
         })
@@ -465,7 +496,7 @@ export function useImageGeneration() {
           headers: {
             'Authorization': `Bearer ${provider.apiKey}`
           },
-          abortCtrl: abortController.value,
+          abortCtrl: ctrl,
           timeout: config.estimatedTime * 2 * 1000
         })
 
@@ -513,26 +544,52 @@ export function useImageGeneration() {
       return { success: false, images: [] }
     } finally {
       stopProgress()
-      isGenerating.value = false
-      currentTask.value = null
-      abortController.value = null
-      streamingText.value = ''
+
+      // 清理本 key 的生成态、流式文本、控制器（不影响其他会话）
+      const newGenerating = { ...generatingMap.value }
+      delete newGenerating[key]
+      generatingMap.value = newGenerating
+
+      const newStreaming = { ...streamingTextMap.value }
+      delete newStreaming[key]
+      streamingTextMap.value = newStreaming
+
+      const newControllers = { ...abortControllers.value }
+      delete newControllers[key]
+      abortControllers.value = newControllers
+
+      if (streamingSessionId.value === key) {
+        streamingSessionId.value = null
+      }
+
+      // 全局描述只有在没有任何会话在生成时才清空，避免影响并行任务
+      if (Object.keys(generatingMap.value).length === 0) {
+        currentTask.value = null
+      }
     }
   }
 
-  // 取消生成
-  const cancelGeneration = () => {
-    if (abortController.value) {
-      abortController.value.abort()
+  // 取消生成：sessionId 不传则取消所有正在进行的生成（向后兼容 sticker/xhs）
+  const cancelGeneration = (sessionId?: string | null) => {
+    if (sessionId) {
+      const ctrl = abortControllers.value[sessionId]
+      if (ctrl) ctrl.abort()
+      return
+    }
+    for (const ctrl of Object.values(abortControllers.value)) {
+      if (ctrl) ctrl.abort()
     }
   }
 
   return {
     isGenerating: readonly(isGenerating),
+    isSessionGenerating,
     progress: readonly(progress),
     currentTask: readonly(currentTask),
     error: readonly(error),
-    streamingText: readonly(streamingText),
+    streamingTextMap: readonly(streamingTextMap),
+    streamingSessionId: readonly(streamingSessionId),
+    getStreamingText,
     generateImage,
     cancelGeneration
   }

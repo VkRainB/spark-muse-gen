@@ -1,4 +1,5 @@
 import { useChatStore } from '../../stores/chat'
+import type { Message } from '../../types/chat'
 
 export function useChat() {
   const store = useChatStore()
@@ -11,28 +12,49 @@ export function useChat() {
     }
   }
 
-  const sendUserMessage = (content: string, images?: Array<{ data: string; mimeType: string }>) => {
+  const sendUserMessage = (
+    content: string,
+    images?: Array<{ data: string; mimeType: string }>,
+    sessionId?: string,
+  ) => {
     ensureSession()
 
-    if (!store.currentSessionId) return null
+    const targetId = sessionId ?? store.currentSessionId
+    if (!targetId) return null
+    // 防御：会话已被删除则丢弃
+    if (!store.sessions.find(s => s.id === targetId)) return null
 
     return store.addMessage({
-      sessionId: store.currentSessionId,
+      sessionId: targetId,
       role: 'user',
       content,
       images
     })
   }
 
-  const addAssistantMessage = (content: string, images?: Array<{ data: string; mimeType: string }>) => {
-    if (!store.currentSessionId) return null
+  const addAssistantMessage = (
+    content: string,
+    images?: Array<{ data: string; mimeType: string }>,
+    sessionId?: string,
+  ) => {
+    const targetId = sessionId ?? store.currentSessionId
+    if (!targetId) return null
+    // 防御：会话已被删除则丢弃
+    if (!store.sessions.find(s => s.id === targetId)) return null
 
     return store.addMessage({
-      sessionId: store.currentSessionId,
+      sessionId: targetId,
       role: 'assistant',
       content,
       images
     })
+  }
+
+  // 按显式 sessionId 取上下文消息（避免发送时通过 currentSessionId 读到错误会话）
+  const getContextMessagesFor = (sessionId: string): Message[] => {
+    if (!sessionId) return []
+    const all = store.messages.filter((m: Message) => m.sessionId === sessionId)
+    return all.slice(-store.contextCount)
   }
 
   const deleteSession = (id: string) => {
@@ -64,6 +86,7 @@ export function useChat() {
 
     sendUserMessage,
     addAssistantMessage,
+    getContextMessagesFor,
     removeLastAssistantReply: store.removeLastAssistantReply,
     clearMessages,
 

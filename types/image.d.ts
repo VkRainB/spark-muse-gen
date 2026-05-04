@@ -9,6 +9,7 @@ export interface ImageGenerationOptions {
   contextMessages?: Message[] // 上下文消息（可选）
   batchSize?: number          // 批量数量（可选）
   stream?: boolean            // 是否流式传输（可选）
+  sessionId?: string | null   // 绑定的会话 id（可选，用于会话隔离；未传则视为全局任务）
 }
 
 // 生成的图像

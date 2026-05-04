@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useSettingsStore } from "../../../stores/settings";
+import { useChatStore } from "../../../stores/chat";
 import type { AspectRatio, Resolution } from "../../../stores/settings";
 
 const settingsStore = useSettingsStore();
-const { generateImage, isGenerating, cancelGeneration } =
+const chatStore = useChatStore();
+const { generateImage, isSessionGenerating, cancelGeneration } =
   useImageGeneration();
 const { saveToFileSystem, isEnabled: autoSaveEnabled } = useFileSystem();
 const chat = useChat();
@@ -24,6 +26,11 @@ const prompt = ref("");
 const previewImages = ref<Array<{ data: string; mimeType: string }>>([]);
 const textareaRef = ref<HTMLTextAreaElement>();
 const paramsOpen = ref(false);
+
+// 当前会话是否正在生成（用于按钮禁用、cancel 目标）
+const currentSessionGenerating = computed(() =>
+  isSessionGenerating(chatStore.currentSessionId),
+);
 
 const resolutionOptions: Array<{ label: string; value: Resolution }> = [
   { label: "1K", value: "1K" },
@@ -95,6 +102,11 @@ const removePreviewImage = (index: number) => {
 const sendMessage = async () => {
   if (!prompt.value.trim() && previewImages.value.length === 0) return;
 
+  // 锁定本次发送的目标会话——后续所有写入（用户消息、流式、助理回复）都按此 id
+  chat.ensureSession();
+  const targetSessionId = chatStore.currentSessionId;
+  if (!targetSessionId) return;
+
   const userPrompt = prompt.value.trim();
   const refImages = [...previewImages.value];
 
@@ -104,20 +116,22 @@ const sendMessage = async () => {
   paramsOpen.value = false;
   adjustTextareaHeight();
 
-  // 添加用户消息
+  // 添加用户消息（显式锁定 sessionId）
   chat.sendUserMessage(
     userPrompt,
     refImages.length > 0 ? refImages : undefined,
+    targetSessionId,
   );
 
-  // 调用图像生成
+  // 调用图像生成（按锁定的 sessionId 取上下文，并把 sessionId 透传）
   const result = await generateImage({
     prompt: userPrompt,
     resolution: settingsStore.resolution,
     aspectRatio: settingsStore.aspectRatio,
     referenceImage: refImages[0]?.data,
-    contextMessages: chat.contextMessages.value,
+    contextMessages: chat.getContextMessagesFor(targetSessionId),
     stream: settingsStore.streamEnabled,
+    sessionId: targetSessionId,
   });
 
   if (result.success && result.images.length > 0) {
@@ -126,8 +140,12 @@ const sendMessage = async () => {
       mimeType: img.mimeType,
     }));
 
-    // 添加助理消息
-    chat.addAssistantMessage("图像生成完成", generatedImages);
+    // 添加助理消息（显式锁定 sessionId，避免切到其他会话后串号）
+    chat.addAssistantMessage(
+      "图像生成完成",
+      generatedImages,
+      targetSessionId,
+    );
 
     // 自动保存
     if (autoSaveEnabled.value) {
@@ -137,13 +155,17 @@ const sendMessage = async () => {
     emit("generated", generatedImages);
   } else if (result.success && result.text) {
     // 文本回复（没有图片）
-    chat.addAssistantMessage(result.text);
+    chat.addAssistantMessage(result.text, undefined, targetSessionId);
   }
 };
 
 // 重新生成：不添加用户消息，只重新调用图像生成
 const resendMessage = async () => {
   if (!prompt.value.trim() && previewImages.value.length === 0) return;
+
+  chat.ensureSession();
+  const targetSessionId = chatStore.currentSessionId;
+  if (!targetSessionId) return;
 
   const userPrompt = prompt.value.trim();
   const refImages = [...previewImages.value];
@@ -154,14 +176,15 @@ const resendMessage = async () => {
   paramsOpen.value = false;
   adjustTextareaHeight();
 
-  // 不添加用户消息，直接调用图像生成
+  // 不添加用户消息，直接调用图像生成（同样按锁定的 sessionId）
   const result = await generateImage({
     prompt: userPrompt,
     resolution: settingsStore.resolution,
     aspectRatio: settingsStore.aspectRatio,
     referenceImage: refImages[0]?.data,
-    contextMessages: chat.contextMessages.value,
+    contextMessages: chat.getContextMessagesFor(targetSessionId),
     stream: settingsStore.streamEnabled,
+    sessionId: targetSessionId,
   });
 
   if (result.success && result.images.length > 0) {
@@ -170,7 +193,11 @@ const resendMessage = async () => {
       mimeType: img.mimeType,
     }));
 
-    chat.addAssistantMessage("图像生成完成", generatedImages);
+    chat.addAssistantMessage(
+      "图像生成完成",
+      generatedImages,
+      targetSessionId,
+    );
 
     if (autoSaveEnabled.value) {
       await saveToFileSystem(generatedImages, "generated");
@@ -179,7 +206,7 @@ const resendMessage = async () => {
     emit("generated", generatedImages);
   } else if (result.success && result.text) {
     // 文本回复（没有图片）
-    chat.addAssistantMessage(result.text);
+    chat.addAssistantMessage(result.text, undefined, targetSessionId);
   }
 };
 
@@ -303,7 +330,7 @@ watch(
         <button
           class="action-btn"
           title="上传参考图"
-          :disabled="isGenerating"
+          :disabled="currentSessionGenerating"
           @click="triggerFileInput"
         >
           <UIcon name="i-heroicons-arrow-up-tray" class="w-5 h-5" />
@@ -317,14 +344,14 @@ watch(
         class="chat-input"
         placeholder="描述画面..."
         rows="1"
-        :disabled="isGenerating"
+        :disabled="currentSessionGenerating"
         @input="adjustTextareaHeight"
         @keydown="handleKeydown"
       />
 
       <!-- 发送/取消按钮 -->
       <button
-        v-if="!isGenerating"
+        v-if="!currentSessionGenerating"
         class="send-btn"
         title="生成图像"
         :disabled="!prompt.trim() && previewImages.length === 0"
@@ -336,7 +363,7 @@ watch(
         v-else
         class="send-btn cancel-btn"
         title="取消生成"
-        @click="cancelGeneration"
+        @click="cancelGeneration(chatStore.currentSessionId)"
       >
         <UIcon name="i-heroicons-stop" class="w-5 h-5" />
       </button>

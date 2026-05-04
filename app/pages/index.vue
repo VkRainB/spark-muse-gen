@@ -1,6 +1,10 @@
 <script setup lang="ts">
 const chat = useChat();
-const { isGenerating, streamingText } = useImageGeneration();
+const {
+  isSessionGenerating,
+  streamingSessionId,
+  getStreamingText,
+} = useImageGeneration();
 const { isMobile } = useDevice();
 
 const messageListRef = ref<{ scrollToBottom: () => void }>();
@@ -13,9 +17,20 @@ const chatInputBridge = useState<{
 
 const promptDrawerOpen = inject<Ref<boolean>>("promptDrawerOpen")!;
 
+// 当前会话的流式文本：仅在当前会话与正在产出的会话一致时返回非空
+const currentStreamingText = computed(() => {
+  const sid = chat.currentSession.value?.id;
+  if (!sid) return "";
+  return streamingSessionId.value === sid ? getStreamingText(sid) : "";
+});
+
+const currentSessionGenerating = computed(() =>
+  isSessionGenerating(chat.currentSession.value?.id),
+);
+
 const chatStatus = computed(() => {
-  if (!isGenerating.value) return "ready" as const;
-  if (streamingText.value) return "streaming" as const;
+  if (!currentSessionGenerating.value) return "ready" as const;
+  if (currentStreamingText.value) return "streaming" as const;
   return "submitted" as const;
 });
 
@@ -49,8 +64,10 @@ const handlePromptSend = (prompt: string) => {
 };
 
 const handleResend = (message: any) => {
-  // 移除最后一条助手回复
-  chat.removeLastAssistantReply();
+  // 锁定当前会话，移除该会话最后一条助手回复
+  const sid = chat.currentSession.value?.id;
+  if (!sid) return;
+  chat.removeLastAssistantReply(sid);
   // 通过 inputBridge 重新发送用户消息（resend 模式不会重复添加用户消息）
   chatInputBridge.value = {
     prompt: message.content || "",
@@ -107,7 +124,7 @@ const handleClearMessages = () => {
           ref="messageListRef"
           :messages="chat.currentMessages.value"
           :status="chatStatus"
-          :streaming-text="streamingText"
+          :streaming-text="currentStreamingText"
           class="messages-area"
           @resend="handleResend"
         />
@@ -118,7 +135,7 @@ const handleClearMessages = () => {
         <button
           class="toolbar-btn"
           title="清空当前会话消息"
-          :disabled="isGenerating"
+          :disabled="currentSessionGenerating"
           @click="handleClearMessages"
         >
           <UIcon name="i-heroicons-trash" class="w-4 h-4" />
