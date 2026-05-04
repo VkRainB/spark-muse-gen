@@ -9,6 +9,7 @@ import JSZip from 'jszip'
 import { useStickerStore } from '../../../stores/sticker'
 import type { StickerImage } from '../../../types/sticker'
 import { downloadImageFromBase64, downloadImageFromBlob } from '../../utils/downloadImage'
+import { getCharacterLabel } from '../../utils/stickerHelpers'
 
 const stickerStore = useStickerStore()
 const { openLightbox } = useLightbox()
@@ -19,7 +20,7 @@ const currentBatch = computed(() => stickerStore.currentBatch)
 const images = computed<StickerImage[]>(() => currentBatch.value?.images ?? [])
 
 const characterLabel = computed(() =>
-  currentBatch.value?.character?.trim() || '未命名角色'
+  getCharacterLabel(currentBatch.value?.character) || '未命名角色'
 )
 
 const imageSrc = (img: StickerImage) => {

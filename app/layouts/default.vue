@@ -40,7 +40,6 @@ onUnmounted(() => {
 
 const bananaToolOpen = ref(false);
 const customPromptToolOpen = ref(false);
-const slicerToolOpen = ref(false);
 const chatInputBridge = useState<{
   prompt: string;
   send: boolean;
@@ -86,7 +85,6 @@ const toggleLeftSidebarCollapse = () => {
 const closeToolModals = () => {
   bananaToolOpen.value = false;
   customPromptToolOpen.value = false;
-  slicerToolOpen.value = false;
 };
 
 // 切换右侧边栏（设置）
@@ -114,14 +112,15 @@ const closeAllSidebars = () => {
   rightSidebarOpen.value = false;
 };
 
-// 工具抽屉/弹层 side（移动端从底部出，桌面右侧出）
-const slideoverSide = computed<'right' | 'bottom'>(() =>
+// Custom 抽屉 side：移动端底部 / 桌面右侧
+const customSlideoverSide = computed<'right' | 'bottom'>(() =>
   isMobile.value ? 'bottom' : 'right'
 );
+// Banana 始终顶部抽屉（更宽展示空间，且不遮挡底部输入框）
 const bananaSlideoverUi = computed(() =>
   isMobile.value
-    ? { content: 'h-[90vh]' }
-    : { content: 'max-w-md w-[28rem]' }
+    ? { content: 'h-[80vh]' }
+    : { content: 'h-[min(620px,72vh)] max-w-none w-full' }
 );
 const customSlideoverUi = computed(() =>
   isMobile.value
@@ -138,14 +137,13 @@ const createNewSession = async () => {
   }
 };
 
-const openToolModal = (tool: "banana" | "custom" | "slicer") => {
+const openToolModal = (tool: "banana" | "custom") => {
   closeToolModals();
   closeAllSidebars();
   promptDrawerOpen.value = false;
 
   if (tool === "banana") bananaToolOpen.value = true;
   if (tool === "custom") customPromptToolOpen.value = true;
-  if (tool === "slicer") slicerToolOpen.value = true;
 };
 
 const openXHS = async () => {
@@ -167,16 +165,22 @@ const openSticker = async () => {
   }
 };
 
+const openSlicer = async () => {
+  closeToolModals();
+  closeAllSidebars();
+  promptDrawerOpen.value = false;
+
+  if (route.path !== "/slicer") {
+    await navigateTo("/slicer");
+  }
+};
+
 const openBananaTool = () => {
   openToolModal("banana");
 };
 
 const openCustomPromptTool = () => {
   openToolModal("custom");
-};
-
-const openSlicerTool = () => {
-  openToolModal("slicer");
 };
 
 const applyPromptToInput = async (prompt: string, sendDirect = false) => {
@@ -314,7 +318,6 @@ provide("togglePromptDrawer", togglePromptDrawer);
         @open-banana="openBananaTool"
         @open-custom-prompt="openCustomPromptTool"
         @open-sticker="openSticker"
-        @open-slicer="openSlicerTool"
       />
     </nav>
 
@@ -433,8 +436,11 @@ provide("togglePromptDrawer", togglePromptDrawer);
 
     <USlideover
       v-model:open="bananaToolOpen"
-      :side="slideoverSide"
+      side="top"
       title="提示词快查"
+      :overlay="false"
+      :modal="false"
+      :dismissible="false"
       :ui="bananaSlideoverUi"
     >
       <template #body>
@@ -444,8 +450,11 @@ provide("togglePromptDrawer", togglePromptDrawer);
 
     <USlideover
       v-model:open="customPromptToolOpen"
-      :side="slideoverSide"
+      :side="customSlideoverSide"
       title="我的提示词"
+      :overlay="false"
+      :modal="false"
+      :dismissible="false"
       :ui="customSlideoverUi"
     >
       <template #body>
@@ -455,14 +464,6 @@ provide("togglePromptDrawer", togglePromptDrawer);
         />
       </template>
     </USlideover>
-
-    <UModal v-model:open="slicerToolOpen">
-      <template #content>
-        <div class="tool-modal tool-modal-medium">
-          <ToolsSlicerTool @close="slicerToolOpen = false" />
-        </div>
-      </template>
-    </UModal>
 
     <!-- UI 组件 -->
     <UNotifications />
@@ -827,23 +828,6 @@ provide("togglePromptDrawer", togglePromptDrawer);
   color: var(--text-main);
 }
 
-.tool-modal {
-  width: min(1120px, calc(100vw - 28px));
-  height: min(90vh, 920px);
-  max-height: min(90vh, 920px);
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-sidebar);
-  border: 1px solid var(--border-color);
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: var(--shadow-popup);
-}
-
-.tool-modal-medium {
-  width: min(980px, calc(100vw - 28px));
-}
-
 /* 滚动条样式 */
 .sidebar-nav::-webkit-scrollbar,
 .settings-sidebar::-webkit-scrollbar {
@@ -864,15 +848,5 @@ provide("togglePromptDrawer", togglePromptDrawer);
 .sidebar-nav::-webkit-scrollbar-thumb:hover,
 .settings-sidebar::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
-}
-
-@media (max-width: 768px) {
-  .tool-modal,
-  .tool-modal-medium {
-    width: min(100vw - 16px, 100%);
-    height: min(92vh, 100%);
-    max-height: min(92vh, 100%);
-    border-radius: 12px;
-  }
 }
 </style>

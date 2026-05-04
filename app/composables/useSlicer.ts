@@ -1,55 +1,115 @@
 import JSZip from 'jszip'
 
-interface SlicerConfig {
-  rows: number
-  cols: number
-  gap: number
-  fillColor: string
-  autoFill: boolean
-  highRes: boolean
-}
+/**
+ * 图片切片 - 辅助线模式
+ *
+ * 行为：
+ * - 上传图片后，用户在图片上点击或预设来添加横/竖切线（百分比 0-100）
+ * - 切线可拖拽调整、可单独删除
+ * - 切片时把 0/100 加进切线集合并排序，遍历每个矩形单元
+ * - 1:1 补全：把矩形画到正方形画布上居中，剩余区域填充背景色
+ * - 2x 高清：画布尺寸 ×2，提升导出清晰度
+ * - 单张下载 / ZIP 批量下载
+ *
+ * 移植自 source/app.js 行 1413-1585 的 SlicerTool
+ */
 
-interface SliceResult {
+export interface SliceResult {
   row: number
   col: number
-  canvas: HTMLCanvasElement
+  width: number
+  height: number
   dataUrl: string
 }
 
 export function useSlicer() {
-  const config = reactive<SlicerConfig>({
-    rows: 3,
-    cols: 3,
-    gap: 0,
-    fillColor: '#ffffff',
-    autoFill: true,
-    highRes: false
-  })
-
   const sourceImage = ref<HTMLImageElement | null>(null)
+  const horizontalLines = ref<number[]>([])
+  const verticalLines = ref<number[]>([])
+  const forceSquare = ref(false)
+  const fillColor = ref('#ffffff')
+  const highRes = ref(true)
   const slices = ref<SliceResult[]>([])
   const isProcessing = ref(false)
 
-  // 加载图片
+  const sortedHLines = computed(() =>
+    [...horizontalLines.value].sort((a, b) => a - b)
+  )
+  const sortedVLines = computed(() =>
+    [...verticalLines.value].sort((a, b) => a - b)
+  )
+
+  const cellCount = computed(() =>
+    (sortedHLines.value.length + 1) * (sortedVLines.value.length + 1)
+  )
+
   const loadImage = (file: File): Promise<void> => {
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload = () => {
         sourceImage.value = img
+        slices.value = []
+        horizontalLines.value = []
+        verticalLines.value = []
         resolve()
       }
-      img.onerror = reject
+      img.onerror = () => reject(new Error('图片加载失败'))
       img.src = URL.createObjectURL(file)
     })
   }
 
-  // 设置九宫格预设
-  const setNineGrid = () => {
-    config.rows = 3
-    config.cols = 3
+  const clamp = (n: number) => Math.max(0, Math.min(100, n))
+
+  const addLine = (type: 'h' | 'v', percent: number) => {
+    const v = clamp(percent)
+    if (type === 'h') horizontalLines.value.push(v)
+    else verticalLines.value.push(v)
   }
 
-  // 切片
+  const removeLine = (type: 'h' | 'v', index: number) => {
+    if (type === 'h') horizontalLines.value.splice(index, 1)
+    else verticalLines.value.splice(index, 1)
+  }
+
+  const moveLine = (type: 'h' | 'v', index: number, percent: number) => {
+    const v = clamp(percent)
+    if (type === 'h') {
+      if (horizontalLines.value[index] !== undefined) {
+        horizontalLines.value[index] = v
+      }
+    } else {
+      if (verticalLines.value[index] !== undefined) {
+        verticalLines.value[index] = v
+      }
+    }
+  }
+
+  const clearLines = () => {
+    horizontalLines.value = []
+    verticalLines.value = []
+  }
+
+  const presetNineGrid = () => {
+    horizontalLines.value = [100 / 3, (100 / 3) * 2]
+    verticalLines.value = [100 / 3, (100 / 3) * 2]
+  }
+
+  const presetHorizontal = (n: number) => {
+    if (n < 2) return
+    horizontalLines.value = []
+    for (let i = 1; i < n; i++) {
+      horizontalLines.value.push((i / n) * 100)
+    }
+  }
+
+  const presetVertical = (n: number) => {
+    if (n < 2) return
+    verticalLines.value = []
+    for (let i = 1; i < n; i++) {
+      verticalLines.value.push((i / n) * 100)
+    }
+  }
+
   const slice = async () => {
     if (!sourceImage.value) return
 
@@ -57,98 +117,144 @@ export function useSlicer() {
     slices.value = []
 
     const img = sourceImage.value
-    const { rows, cols, fillColor, autoFill, highRes } = config
+    const w = img.naturalWidth
+    const h = img.naturalHeight
+    const scale = highRes.value ? 2 : 1
 
-    const scale = highRes ? 2 : 1
-    const sliceWidth = Math.floor(img.width / cols) * scale
-    const sliceHeight = Math.floor(img.height / rows) * scale
+    const hCuts = [0, ...sortedHLines.value.map((p) => (p / 100) * h), h]
+    const vCuts = [0, ...sortedVLines.value.map((p) => (p / 100) * w), w]
 
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < cols; col++) {
-        const canvas = document.createElement('canvas')
-        canvas.width = sliceWidth
-        canvas.height = sliceHeight
+    const results: SliceResult[] = []
 
-        const ctx = canvas.getContext('2d')
-        if (!ctx) continue
+    try {
+      for (let i = 0; i < hCuts.length - 1; i++) {
+        for (let j = 0; j < vCuts.length - 1; j++) {
+          const sx = vCuts[j]!
+          const sy = hCuts[i]!
+          const sw = vCuts[j + 1]! - sx
+          const sh = hCuts[i + 1]! - sy
 
-        // 填充背景色
-        if (autoFill) {
-          ctx.fillStyle = fillColor
-          ctx.fillRect(0, 0, sliceWidth, sliceHeight)
+          if (sw < 1 || sh < 1) continue
+
+          const canvas = document.createElement('canvas')
+          const ctx = canvas.getContext('2d', { alpha: true })
+          if (!ctx) continue
+
+          if (forceSquare.value) {
+            const maxDim = Math.max(sw, sh)
+            canvas.width = maxDim * scale
+            canvas.height = maxDim * scale
+
+            ctx.fillStyle = fillColor.value
+            ctx.fillRect(0, 0, canvas.width, canvas.height)
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+
+            const offsetX = (maxDim - sw) / 2
+            const offsetY = (maxDim - sh) / 2
+            ctx.drawImage(
+              img,
+              sx,
+              sy,
+              sw,
+              sh,
+              offsetX * scale,
+              offsetY * scale,
+              sw * scale,
+              sh * scale
+            )
+          } else {
+            canvas.width = sw * scale
+            canvas.height = sh * scale
+            ctx.imageSmoothingEnabled = true
+            ctx.imageSmoothingQuality = 'high'
+            ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw * scale, sh * scale)
+          }
+
+          results.push({
+            row: i,
+            col: j,
+            width: Math.round(canvas.width / scale),
+            height: Math.round(canvas.height / scale),
+            dataUrl: canvas.toDataURL('image/png', 1.0),
+          })
         }
-
-        // 绘制切片
-        const sx = col * (img.width / cols)
-        const sy = row * (img.height / rows)
-        const sw = img.width / cols
-        const sh = img.height / rows
-
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sliceWidth, sliceHeight)
-
-        slices.value.push({
-          row,
-          col,
-          canvas,
-          dataUrl: canvas.toDataURL('image/png')
-        })
       }
-    }
 
-    isProcessing.value = false
+      slices.value = results
+    } finally {
+      isProcessing.value = false
+    }
   }
 
-  // 下载单个切片
-  const downloadSlice = (index: number, prefix: string = 'slice') => {
-    const sliceItem = slices.value[index]
-    if (!sliceItem) return
-
+  const downloadSlice = (index: number, prefix = 'slice') => {
+    const item = slices.value[index]
+    if (!item) return
     const link = document.createElement('a')
-    link.download = `${prefix}_${sliceItem.row + 1}_${sliceItem.col + 1}.png`
-    link.href = sliceItem.dataUrl
+    link.download = `${prefix}_${item.row + 1}_${item.col + 1}.png`
+    link.href = item.dataUrl
     link.click()
   }
 
-  // 批量下载
-  const downloadAll = async (prefix: string = 'slices') => {
+  const downloadAll = async (prefix = 'slices') => {
     if (slices.value.length === 0) return
 
     const zip = new JSZip()
+    const folder = zip.folder(prefix)
+    if (!folder) throw new Error('无法创建 zip 目录')
 
-    for (const sliceItem of slices.value) {
-      const base64 = sliceItem.dataUrl.split(',')[1]
+    for (const item of slices.value) {
+      const base64 = item.dataUrl.split(',')[1]
       if (base64) {
-        zip.file(`${prefix}_${sliceItem.row + 1}_${sliceItem.col + 1}.png`, base64, { base64: true })
+        folder.file(
+          `slice_${item.row + 1}_${item.col + 1}.png`,
+          base64,
+          { base64: true }
+        )
       }
     }
 
     const blob = await zip.generateAsync({ type: 'blob' })
     const link = document.createElement('a')
-    link.download = `${prefix}.zip`
+    link.download = `${prefix}_${Date.now()}.zip`
     link.href = URL.createObjectURL(blob)
     link.click()
     URL.revokeObjectURL(link.href)
   }
 
-  // 清除
   const clear = () => {
-    if (sourceImage.value) {
+    if (sourceImage.value && sourceImage.value.src.startsWith('blob:')) {
       URL.revokeObjectURL(sourceImage.value.src)
     }
     sourceImage.value = null
+    horizontalLines.value = []
+    verticalLines.value = []
     slices.value = []
   }
 
   return {
-    config,
     sourceImage: readonly(sourceImage),
+    horizontalLines,
+    verticalLines,
+    forceSquare,
+    fillColor,
+    highRes,
     slices: readonly(slices),
     isProcessing: readonly(isProcessing),
+    sortedHLines,
+    sortedVLines,
+    cellCount,
     loadImage,
-    setNineGrid,
+    addLine,
+    removeLine,
+    moveLine,
+    clearLines,
+    presetNineGrid,
+    presetHorizontal,
+    presetVertical,
     slice,
     downloadSlice,
     downloadAll,
-    clear
+    clear,
   }
 }

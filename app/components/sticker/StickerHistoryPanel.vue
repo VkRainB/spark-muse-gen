@@ -7,6 +7,10 @@
  */
 
 import { useStickerStore } from '../../../stores/sticker'
+import {
+  getCharacterLabel,
+  getCharacterReferenceSrc,
+} from '../../utils/stickerHelpers'
 
 const stickerStore = useStickerStore()
 
@@ -64,11 +68,17 @@ const formatTime = (ts: number) => {
   })
 }
 
-const previewSrc = (batch: { images: Array<{ data: string; mimeType: string }> }) => {
+const previewSrc = (batch: {
+  images: Array<{ data: string; mimeType: string }>
+  character?: import('../../../types/sticker').StickerCharacterValue
+}) => {
   const first = batch.images[0]
-  if (!first) return ''
-  if (first.data.startsWith('data:')) return first.data
-  return `data:${first.mimeType || 'image/png'};base64,${first.data}`
+  if (first) {
+    if (first.data.startsWith('data:')) return first.data
+    return `data:${first.mimeType || 'image/png'};base64,${first.data}`
+  }
+  // 该批次还没生成图：fallback 到角色参考图作为缩略
+  return getCharacterReferenceSrc(batch.character)
 }
 
 const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
@@ -117,7 +127,7 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
           </div>
         </div>
         <div class="history-meta">
-          <div class="history-title">{{ batch.character || '未命名角色' }}</div>
+          <div class="history-title">{{ getCharacterLabel(batch.character) }}</div>
           <div class="history-sub">
             <span>{{ variantSummary(batch) }}</span>
             <span class="dot">·</span>

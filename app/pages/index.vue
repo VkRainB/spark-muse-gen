@@ -152,12 +152,21 @@ const handleClearMessages = () => {
       v-model:open="promptDrawerOpen"
       side="right"
       title="快捷提示词"
-      :ui="{ content: 'max-w-xs' }"
+      :ui="{ content: 'max-w-xs', footer: 'justify-end' }"
     >
       <template #body>
         <ChatQuickPromptPanel
           @apply="handlePromptApply"
           @send="handlePromptSend"
+        />
+      </template>
+      <template #footer="{ close }">
+        <UButton
+          label="关闭"
+          color="neutral"
+          variant="outline"
+          icon="i-heroicons-x-mark"
+          @click="close"
         />
       </template>
     </USlideover>

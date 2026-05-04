@@ -32,7 +32,6 @@ const emit = defineEmits<{
   "open-banana": [];
   "open-custom-prompt": [];
   "open-sticker": [];
-  "open-slicer": [];
 }>();
 
 // 创建新会话
@@ -72,7 +71,6 @@ type ToolEventName =
   | 'open-banana'
   | 'open-custom-prompt'
   | 'open-sticker'
-  | 'open-slicer'
 
 interface ToolCard {
   id: string
@@ -115,6 +113,17 @@ const toolCards: ToolCard[] = [
     event: "open-sticker",
   },
   {
+    id: "slicer",
+    title: "图片切片",
+    desc: "九宫格切图工作台",
+    icon: "i-heroicons-scissors",
+    colorClass: "tool-nav-card",
+    iconClass: "tool-icon",
+    group: "workspace",
+    formIcon: "navigate",
+    to: "/slicer",
+  },
+  {
     id: "banana",
     title: "提示词快查",
     desc: "快速查找优质提示词",
@@ -135,17 +144,6 @@ const toolCards: ToolCard[] = [
     group: "tool",
     formIcon: "drawer",
     event: "open-custom-prompt",
-  },
-  {
-    id: "slicer",
-    title: "图片切片",
-    desc: "九宫格切图工具",
-    icon: "i-heroicons-scissors",
-    colorClass: "tool-nav-card",
-    iconClass: "tool-icon",
-    group: "tool",
-    formIcon: "modal",
-    event: "open-slicer",
   },
 ];
 

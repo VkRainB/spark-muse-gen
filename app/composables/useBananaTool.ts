@@ -13,7 +13,31 @@ const SOURCES = [
 ]
 
 const CACHE_KEY = 'banana_prompts_cache'
+const CACHE_VERSION = 2
 const CACHE_EXPIRY = 24 * 60 * 60 * 1000 // 24 hours
+
+/**
+ * 上游 prompts.json 没有 id 字段，且部分字段可能缺失。
+ * 本函数把任意输入数据归一化为符合 BananaPrompt 的安全数据。
+ */
+const normalizePrompts = (items: unknown): BananaPrompt[] => {
+  if (!Array.isArray(items)) return []
+  return items.map((raw, idx) => {
+    const item = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+    const rawId = typeof item.id === 'string' && item.id ? item.id : ''
+    const title = typeof item.title === 'string' ? item.title : `提示词 ${idx + 1}`
+    const prompt = typeof item.prompt === 'string' ? item.prompt : ''
+    const category = typeof item.category === 'string' && item.category ? item.category : '未分类'
+    const preview = typeof item.preview === 'string' && item.preview ? item.preview : undefined
+    return {
+      id: rawId || `bp-${idx}-${title.slice(0, 12)}`,
+      title,
+      prompt,
+      category,
+      preview,
+    }
+  })
+}
 
 export function useBananaTool() {
   const prompts = ref<BananaPrompt[]>([])
@@ -29,10 +53,11 @@ export function useBananaTool() {
     if (!cached) return null
 
     try {
-      const { data, timestamp } = JSON.parse(cached)
-      if (Date.now() - timestamp < CACHE_EXPIRY) {
-        return data
-      }
+      const parsed = JSON.parse(cached) as { data: unknown; timestamp: number; version?: number }
+      // 版本不一致或过期都视为失效（旧版缓存里没有 id 字段）
+      if (parsed.version !== CACHE_VERSION) return null
+      if (Date.now() - parsed.timestamp >= CACHE_EXPIRY) return null
+      return normalizePrompts(parsed.data)
     } catch {
       localStorage.removeItem(CACHE_KEY)
     }
@@ -45,7 +70,8 @@ export function useBananaTool() {
 
     localStorage.setItem(CACHE_KEY, JSON.stringify({
       data,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      version: CACHE_VERSION,
     }))
   }
 
@@ -75,7 +101,8 @@ export function useBananaTool() {
         const response = await fetch(source)
         if (response.ok) {
           const data = await response.json()
-          prompts.value = Array.isArray(data) ? data : data.prompts || []
+          const rawItems = Array.isArray(data) ? data : (data?.prompts ?? [])
+          prompts.value = normalizePrompts(rawItems)
           saveToCache(prompts.value)
           isLoading.value = false
           return
@@ -86,7 +113,7 @@ export function useBananaTool() {
     }
 
     // If all sources fail, use default prompts
-    prompts.value = getDefaultPrompts()
+    prompts.value = normalizePrompts(getDefaultPrompts())
     error.value = '无法加载提示词库，使用默认列表'
     toast.warning('提示词加载失败', '使用默认提示词列表')
 

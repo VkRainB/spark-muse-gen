@@ -9,6 +9,7 @@
  *  - <768：单栏堆叠，历史抽屉
  */
 
+import type { StickerCharacter } from '../../types/sticker'
 import { useStickerStore } from '../../stores/sticker'
 
 definePageMeta({
@@ -21,7 +22,10 @@ const stickerStore = useStickerStore()
 const toast = useAppToast()
 const { isMobile, isTablet } = useDevice()
 
-const character = ref('')
+const character = ref<StickerCharacter>({
+  description: '',
+  referenceImage: undefined,
+})
 const background = ref<'white' | 'transparent'>('white')
 const selectedEmotions = ref<string[]>([])
 const selectedActions = ref<string[]>([])
@@ -34,20 +38,23 @@ const totalSelected = computed(
   () => selectedEmotions.value.length + selectedActions.value.length,
 )
 
+const hasCharacter = computed(() => {
+  const text = (character.value.description || '').trim()
+  const hasImage = !!character.value.referenceImage?.data
+  return text.length > 0 || hasImage
+})
+
 const canGenerateSingle = computed(
-  () => character.value.trim().length > 0 && !isGenerating.value,
+  () => hasCharacter.value && !isGenerating.value,
 )
 const canGenerateBatch = computed(
-  () =>
-    character.value.trim().length > 0 &&
-    totalSelected.value > 0 &&
-    !isGenerating.value,
+  () => hasCharacter.value && totalSelected.value > 0 && !isGenerating.value,
 )
 
 const handleGenerateBatch = async () => {
   if (!canGenerateBatch.value) return
   await generateStickerPack(
-    character.value,
+    { ...character.value },
     selectedEmotions.value,
     selectedActions.value,
     background.value,
@@ -65,7 +72,7 @@ const handleGenerateSingle = async () => {
   let batchId = stickerStore.currentBatchId
   if (!batchId) {
     batchId = stickerStore.createBatch({
-      character: character.value,
+      character: { ...character.value },
       background: background.value,
       emotions: emotion ? [emotion] : [],
       actions: action ? [action] : [],
@@ -73,7 +80,7 @@ const handleGenerateSingle = async () => {
   }
 
   const result = await generateSticker({
-    character: character.value,
+    character: { ...character.value },
     emotion,
     action,
     background: background.value,

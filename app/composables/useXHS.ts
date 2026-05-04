@@ -89,8 +89,11 @@ export function useXHS() {
           storyboard?: Array<{ description?: string; imagePrompt?: string; prompt?: string }>
         }
 
-        const fullContent = `${parsed.title || ''}\n\n${parsed.content || ''}\n\n${parsed.tags?.map((t: string) => `#${t}`).join(' ') || ''}`
-        store.setContent(fullContent)
+        store.setStructured({
+          title: parsed.title || '',
+          body: parsed.content || '',
+          tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+        })
 
         const storyboard: StoryboardItem[] = (parsed.storyboard || []).map((item, index: number) => ({
           id: crypto.randomUUID(),
@@ -176,10 +179,20 @@ export function useXHS() {
     toast.info('历史记录已删除')
   }
 
+  // 清空全部历史
+  const clearAllHistory = () => {
+    store.clearAllHistory()
+    toast.info('所有历史记录已清空')
+  }
+
   return {
     // State
     history: computed(() => store.history),
+    sortedHistory: computed(() => store.sortedHistory),
     currentTopic: computed(() => store.currentTopic),
+    currentTitle: computed(() => store.currentTitle),
+    currentBody: computed(() => store.currentBody),
+    currentTags: computed(() => store.currentTags),
     currentContent: computed(() => store.currentContent),
     currentStoryboard: computed(() => store.currentStoryboard),
     isGenerating: computed(() => store.isGenerating || isGenerating.value),
@@ -196,6 +209,7 @@ export function useXHS() {
     saveToHistory,
     loadFromHistory: store.loadFromHistory.bind(store),
     deleteHistory,
+    clearAllHistory,
     clearCurrent: store.clearCurrent.bind(store)
   }
 }
