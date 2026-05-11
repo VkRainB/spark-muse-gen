@@ -39,33 +39,38 @@ pnpm generate         # 静态生成
 
 ```
 app/
-├── api/fetchClient.ts        # API 请求客户端
+├── api/fetchClient.ts        # API 请求客户端（streamFetch / jsonFetch）
 ├── components/
-│   ├── chat/                  # 聊天界面（InputArea, InputBar, MessageItem, MessageList, QuickPromptPanel）
-│   ├── image/                 # 图像生成（ImageGenerator）
+│   ├── chat/                  # 聊天界面（InputBar, MessageItem, MessageList, QuickPromptPanel）
 │   ├── settings/              # 设置（ProviderManager, SettingsPanel, ThemeSwitch）
-│   ├── tools/                 # 工具（BananaTool, CustomPromptTool, SlicerTool, StickerMode）
-│   └── ui/                    # 通用 UI（ConfirmDialog, Lightbox, Loading, SidebarNav, SmartProgressBar）
+│   ├── sticker/               # 贴纸工作台（StickerCharacterPanel, StickerHistoryPanel, StickerResultGrid, StickerVariantPicker）
+│   ├── tools/                 # 工具弹层（BananaTool, CustomPromptTool）
+│   └── ui/                    # 通用 UI（ConfirmDialog, Lightbox, SidebarNav, SmartProgressBar）
 ├── composables/               # 13 个组合式函数（见下方）
 ├── layouts/default.vue        # 主布局：侧边栏导航 + 设置面板 + 工具模态框
-├── pages/                     # 3 个页面路由
+├── pages/
 │   ├── index.vue              # 主聊天/图像生成页
-│   ├── settings.vue           # 设置页
+│   ├── slicer.vue             # 图片切片/九宫格工作台
+│   ├── sticker.vue            # 贴纸/表情包创作工作台
 │   └── xhs.vue                # 小红书内容创作页
 ├── plugins/
 │   ├── pinia-persist.client.ts    # Pinia 持久化插件注册
 │   └── vue-warn-filter.client.ts  # 过滤 Suspense 实验性警告
-└── utils/                     # 工具函数（base64, blob, download, escapeHtml）
+└── utils/
+    ├── base64Utils.ts
+    ├── downloadImage.ts
+    └── stickerHelpers.ts         # Sticker 数据兼容读取助手
 
 stores/                        # Pinia stores（在 app/ 外，通过 nuxt.config pinia.storesDirs 配置）
 ├── chat.ts                    # 会话和消息管理
 ├── prompts.ts                 # 自定义提示词
 ├── provider.ts                # API 渠道配置
 ├── settings.ts                # 应用设置
+├── sticker.ts                 # 贴纸批次、角色、自定义变体
 └── xhs.ts                     # 小红书相关状态
 
 types/                         # TypeScript 类型定义
-├── chat.d.ts, image.d.ts, provider.d.ts, xhs.d.ts, index.d.ts
+├── chat.d.ts, image.d.ts, provider.d.ts, sticker.d.ts, xhs.d.ts, index.d.ts
 ```
 
 ### 关键架构模式
@@ -80,7 +85,7 @@ types/                         # TypeScript 类型定义
 | `useFileSystem` | File System Access API 本地自动保存 |
 | `useIndexedDB` | IndexedDB 数据库操作封装 |
 | `useBananaTool` | banana-prompt-quicker 提示词库集成 |
-| `useStickerMode` | 贴纸/表情包创作模式 |
+| `useStickerMode` | 贴纸/表情包创作模式逻辑 |
 | `useSlicer` | 图片切片/九宫格工具 |
 | `useXHS` | 小红书内容创作 |
 | `useTheme` | 主题管理 |
@@ -89,12 +94,12 @@ types/                         # TypeScript 类型定义
 | `useDevice` | 设备检测（移动端/桌面端） |
 
 **跨组件通信**：
-- `useState("chat-input-bridge")` — 布局与聊天组件间的输入桥接
+- `useState("chat-input-bridge")` — 布局与聊天组件间的输入桥接（prompt + send + nonce）
 - `useState("left-sidebar-collapsed")` — 侧边栏折叠状态
-- `provide/inject` — 布局向子组件注入侧边栏控制函数
+- `provide/inject` — 布局向子组件注入侧边栏控制函数（toggleLeftSidebar, toggleSettings, closeAllSidebars 等）
 
 **数据持久化**：
-- **Pinia + persistedstate** — stores 自动持久化到 localStorage
+- **Pinia + persistedstate** — stores 自动持久化到 localStorage（注意 sticker store 有批次上限保护：MAX_BATCHES=12, MAX_IMAGES_PER_BATCH=12）
 - **IndexedDB** — `GeminiProDB`（会话、消息）、`XHSHistoryDB`（创作历史）
 
 ### API 集成
@@ -103,10 +108,14 @@ types/                         # TypeScript 类型定义
 1. **Gemini 原生接口** — `generativelanguage.googleapis.com`
 2. **OpenAI 兼容接口** — 标准 OpenAI API 格式，支持 SSE 流式传输
 
+`fetchClient.ts` 提供 `streamFetch`（SSE）和 `jsonFetch`（普通 JSON）两个请求函数。
+
 ### Nuxt 配置要点
 
 - `ssr: false` — 纯 SPA，无服务端渲染
 - `devServer.port: 3001`
+- `routeRules`: `/settings` 已重定向到 `/`（设置已收敛到右侧抽屉）
+- `pages.pattern`: 排除 `**/_components/**`（页面内子组件目录不注册为路由）
 - Pinia stores 目录：`./stores/**`（在 `app/` 外部）
 - 别名：`~/stores` → `./stores`，`~/types` → `./types`
 
@@ -114,7 +123,7 @@ types/                         # TypeScript 类型定义
 
 - `doc/PRD.md` — 产品需求文档
 - `doc/Api/API_INTEGRATION_GUIDE.md` — API 集成指南
-- `doc/Refactor/` — Nuxt 迁移指南（NUXT_MIGRATION_GUIDE.md, NUXT_MIGRATION_GUIDE_PART2.md）
+- `doc/Refactor/` — Nuxt 迁移指南
 
 ## 旧版代码参考
 
