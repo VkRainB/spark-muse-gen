@@ -2,6 +2,7 @@
 /**
  * 历史批次列表
  * 从 useStickerStore 直接读，组件不接收 props（自治）
+ * 缩略图从 IndexedDB 异步加载
  * emit:
  *  - select(batchId)：可选透传，外部如需在切换时做额外动作（如关闭抽屉）使用
  */
@@ -11,8 +12,11 @@ import {
   getCharacterLabel,
   getCharacterReferenceSrc,
 } from '../../utils/stickerHelpers'
+import { toDataUrl } from '../../utils/base64Utils'
+import type { StickerBatch } from '../../../types/sticker'
 
 const stickerStore = useStickerStore()
+const imageDB = useStickerImageDB()
 
 const emit = defineEmits<{
   select: [batchId: string]
@@ -27,6 +31,40 @@ const showDeleteConfirm = computed({
   },
 })
 
+/** batchId -> 第一张图的 dataURL（缩略图缓存） */
+const thumbCache = ref<Record<string, string>>({})
+
+const ensureThumb = async (batch: StickerBatch) => {
+  if (thumbCache.value[batch.id] !== undefined) return
+  const firstRef = batch.images[0]
+  if (!firstRef) {
+    thumbCache.value[batch.id] = ''
+    return
+  }
+  try {
+    const img = await imageDB.get(firstRef.id)
+    thumbCache.value[batch.id] = img ? toDataUrl(img.data, img.mimeType) : ''
+  } catch {
+    thumbCache.value[batch.id] = ''
+  }
+}
+
+watch(
+  () => stickerStore.sortedBatches.map((b) => `${b.id}:${b.images[0]?.id ?? ''}`).join('|'),
+  () => {
+    for (const batch of stickerStore.sortedBatches) {
+      // 若第一张图变了（id 与缓存对应不上），重置后重新加载
+      const firstId = batch.images[0]?.id ?? ''
+      const cached = thumbCache.value[batch.id]
+      if (cached === undefined || (firstId && cached === '')) {
+        delete thumbCache.value[batch.id]
+        void ensureThumb(batch)
+      }
+    }
+  },
+  { immediate: true },
+)
+
 const handleSelect = (batchId: string) => {
   stickerStore.switchBatch(batchId)
   emit('select', batchId)
@@ -36,9 +74,13 @@ const requestDelete = (batchId: string) => {
   pendingDeleteId.value = batchId
 }
 
-const confirmDelete = () => {
+const confirmDelete = async () => {
   if (pendingDeleteId.value) {
-    stickerStore.deleteBatch(pendingDeleteId.value)
+    const droppedIds = stickerStore.deleteBatch(pendingDeleteId.value)
+    delete thumbCache.value[pendingDeleteId.value]
+    if (droppedIds.length > 0) {
+      await imageDB.removeMany(droppedIds).catch((err) => console.error(err))
+    }
   }
   pendingDeleteId.value = null
 }
@@ -47,8 +89,10 @@ const requestClearAll = () => {
   showClearConfirm.value = true
 }
 
-const confirmClearAll = () => {
+const confirmClearAll = async () => {
   stickerStore.clearAll()
+  thumbCache.value = {}
+  await imageDB.clearAll().catch((err) => console.error(err))
   showClearConfirm.value = false
 }
 
@@ -68,17 +112,12 @@ const formatTime = (ts: number) => {
   })
 }
 
-const previewSrc = (batch: {
-  images: Array<{ data: string; mimeType: string }>
-  character?: import('../../../types/sticker').StickerCharacterValue
-}) => {
-  const first = batch.images[0]
-  if (first) {
-    if (first.data.startsWith('data:')) return first.data
-    return `data:${first.mimeType || 'image/png'};base64,${first.data}`
-  }
+const previewSrc = (batch: StickerBatch): string => {
+  const cached = thumbCache.value[batch.id]
+  if (cached) return cached
   // 该批次还没生成图：fallback 到角色参考图作为缩略
-  return getCharacterReferenceSrc(batch.character)
+  if (batch.images.length === 0) return getCharacterReferenceSrc(batch.character)
+  return ''
 }
 
 const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {

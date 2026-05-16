@@ -9,7 +9,7 @@
  *  - <768：单栏堆叠，历史抽屉
  */
 
-import type { StickerCharacter } from '../../types/sticker'
+import type { StickerCharacter, StickerImage, StickerImageRef } from '../../types/sticker'
 import { useStickerStore } from '../../stores/sticker'
 
 definePageMeta({
@@ -19,6 +19,7 @@ definePageMeta({
 const { emotions, actions, generateStickerPack, generateSticker } = useStickerMode()
 const { isGenerating, progress } = useImageGeneration()
 const stickerStore = useStickerStore()
+const imageDB = useStickerImageDB()
 const toast = useAppToast()
 const { isMobile, isTablet } = useDevice()
 
@@ -71,12 +72,16 @@ const handleGenerateSingle = async () => {
   // 确保有当前批次接收单次结果
   let batchId = stickerStore.currentBatchId
   if (!batchId) {
-    batchId = stickerStore.createBatch({
+    const created = stickerStore.createBatch({
       character: { ...character.value },
       background: background.value,
       emotions: emotion ? [emotion] : [],
       actions: action ? [action] : [],
     })
+    batchId = created.batchId
+    if (created.droppedImageIds.length > 0) {
+      void imageDB.removeMany(created.droppedImageIds)
+    }
   }
 
   const result = await generateSticker({
@@ -87,14 +92,31 @@ const handleGenerateSingle = async () => {
   })
 
   if (result.success && result.images.length > 0) {
-    stickerStore.addImagesToBatch(batchId, result.images.map((img) => ({
+    const stickerImages: StickerImage[] = result.images.map((img) => ({
       id: img.id,
       data: img.data,
       mimeType: img.mimeType,
       createdAt: img.createdAt,
       emotionId: emotion,
       actionId: action,
-    })))
+    }))
+
+    try {
+      await imageDB.putMany(stickerImages)
+    } catch (err) {
+      console.error('IndexedDB 写入失败：', err)
+      toast.error('图片保存失败', '可能是浏览器存储已满')
+      return
+    }
+
+    const refs: StickerImageRef[] = stickerImages.map((img) => ({
+      id: img.id,
+      mimeType: img.mimeType,
+      createdAt: img.createdAt,
+      emotionId: img.emotionId,
+      actionId: img.actionId,
+    }))
+    stickerStore.addImagesToBatch(batchId, refs)
     toast.success('已生成', `+1 张到当前批次`)
   }
 }

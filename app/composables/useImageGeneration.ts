@@ -3,6 +3,8 @@ import type { Message } from '../../types/chat'
 import { streamFetch, jsonFetch } from '../api/fetchClient'
 import type { SSEMessageItem } from '../api/fetchClient'
 import { useProviderStore } from '../../stores/provider'
+import { resolveOpenAIChatCompletionsUrl, resolveGeminiGenerateUrl } from '../utils/urlHelpers'
+import { toDataUrl } from '../utils/base64Utils'
 
 interface ResolutionConfig {
   size: number
@@ -68,22 +70,8 @@ interface ParsedOpenAIResult {
   usage?: GenerationResult['usage']
 }
 
-const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
-
-const resolveOpenAIChatCompletionsUrl = (baseUrl: string) => {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) return '/v1/chat/completions'
-  if (/\/chat\/completions$/i.test(normalized)) return normalized
-  if (/\/v\d+$/i.test(normalized)) return `${normalized}/chat/completions`
-  return `${normalized}/v1/chat/completions`
-}
-
-const imageToDataUrl = (image: { data: string; mimeType: string }) => {
-  if (image.data.startsWith('data:') || image.data.startsWith('http')) {
-    return image.data
-  }
-  return `data:${image.mimeType || 'image/png'};base64,${image.data}`
-}
+const imageToDataUrl = (image: { data: string; mimeType: string }): string =>
+  toDataUrl(image.data, image.mimeType)
 
 const buildOpenAIContextMessages = (options: ImageGenerationOptions): OpenAIChatMessage[] => {
   const contextMessages = options.contextMessages || []
@@ -429,7 +417,7 @@ export function useImageGeneration() {
 
       if (provider.type === 'gemini') {
         // Gemini 原生接口 - 使用 jsonFetch
-        const url = `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`
+        const url = resolveGeminiGenerateUrl(provider.baseUrl, provider.model, provider.apiKey)
         const body = buildGeminiRequest(options, options.referenceImage)
 
         const data = await jsonFetch<{

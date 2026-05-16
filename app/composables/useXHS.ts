@@ -1,6 +1,29 @@
 import type { StoryboardItem } from '../../types/xhs'
 import { useXHSStore } from '../../stores/xhs'
 import { useProviderStore } from '../../stores/provider'
+import { jsonFetch } from '../api/fetchClient'
+import { resolveOpenAIChatCompletionsUrl, resolveGeminiGenerateUrl } from '../utils/urlHelpers'
+
+interface GeminiTextResponse {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{ text?: string }>
+    }
+  }>
+}
+
+interface OpenAIChatResponse {
+  choices?: Array<{
+    message?: { content?: string }
+  }>
+}
+
+interface XHSStructured {
+  title?: string
+  content?: string
+  tags?: string[]
+  storyboard?: Array<{ description?: string; imagePrompt?: string; prompt?: string }>
+}
 
 export function useXHS() {
   const store = useXHSStore()
@@ -46,48 +69,29 @@ export function useXHS() {
   ]
 }`
 
-      const url = provider.type === 'gemini'
-        ? `${provider.baseUrl}/v1beta/models/${provider.model}:generateContent?key=${provider.apiKey}`
-        : `${provider.baseUrl}/chat/completions`
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (provider.type === 'openai') {
-        headers['Authorization'] = `Bearer ${provider.apiKey}`
-      }
-
-      const body = provider.type === 'gemini'
-        ? { contents: [{ parts: [{ text: prompt }] }] }
-        : { model: provider.model, messages: [{ role: 'user', content: prompt }] }
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body)
-      })
-
-      if (!response.ok) {
-        throw new Error('生成失败')
-      }
-
-      const data = await response.json()
-
-      // 解析响应
       let text = ''
+
       if (provider.type === 'gemini') {
+        const url = resolveGeminiGenerateUrl(provider.baseUrl, provider.model, provider.apiKey)
+        const data = await jsonFetch<GeminiTextResponse>({
+          url,
+          data: { contents: [{ parts: [{ text: prompt }] }] }
+        })
         text = data.candidates?.[0]?.content?.parts?.[0]?.text || ''
       } else {
+        const url = resolveOpenAIChatCompletionsUrl(provider.baseUrl)
+        const data = await jsonFetch<OpenAIChatResponse>({
+          url,
+          headers: { Authorization: `Bearer ${provider.apiKey}` },
+          data: { model: provider.model, messages: [{ role: 'user', content: prompt }] }
+        })
         text = data.choices?.[0]?.message?.content || ''
       }
 
       // 尝试解析 JSON
       const jsonMatch = text.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]) as {
-          title?: string
-          content?: string
-          tags?: string[]
-          storyboard?: Array<{ description?: string; imagePrompt?: string; prompt?: string }>
-        }
+        const parsed = JSON.parse(jsonMatch[0]) as XHSStructured
 
         store.setStructured({
           title: parsed.title || '',
@@ -111,7 +115,12 @@ export function useXHS() {
       toast.warning('内容已生成', '无法解析分镜，请手动添加')
       return true
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '未知错误'
+      const message =
+        typeof err === 'string'
+          ? err
+          : err instanceof Error
+            ? err.message
+            : (err as { message?: string })?.message || '未知错误'
       toast.error('生成失败', message)
       return false
     } finally {

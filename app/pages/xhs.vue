@@ -13,6 +13,7 @@
 import JSZip from 'jszip'
 import type { StoryboardItem } from '../../types/xhs'
 import { downloadImageFromBase64, downloadImageFromBlob } from '../utils/downloadImage'
+import { toDataUrl, stripDataUrlPrefix } from '../utils/base64Utils'
 
 definePageMeta({
   layout: 'default',
@@ -148,16 +149,7 @@ const isPromptExpanded = (id: string) => expandedPrompts.value.has(id)
 
 const getImageSrc = (image?: { data: string; mimeType: string }) => {
   if (!image) return ''
-  if (image.data.startsWith('data:')) return image.data
-  return `data:${image.mimeType};base64,${image.data}`
-}
-
-const stripDataUrlPrefix = (data: string) => {
-  if (data.startsWith('data:')) {
-    const idx = data.indexOf('base64,')
-    return idx === -1 ? data : data.slice(idx + 7)
-  }
-  return data
+  return toDataUrl(image.data, image.mimeType)
 }
 
 const previewableItems = computed(() =>

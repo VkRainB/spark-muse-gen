@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Provider, ProviderFormData } from '../../../types/provider'
+import { resolveOpenAIChatCompletionsUrl, resolveGeminiGenerateUrl } from '../../utils/urlHelpers'
 
 const props = withDefaults(defineProps<{
   showTitle?: boolean
@@ -74,16 +75,6 @@ const formData = ref<ProviderFormData>({
   weight: 0
 })
 
-const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
-
-const resolveOpenAIChatPreviewUrl = (baseUrl: string) => {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) return '/v1/chat/completions'
-  if (/\/chat\/completions$/i.test(normalized)) return normalized
-  if (/\/v\d+$/i.test(normalized)) return `${normalized}/chat/completions`
-  return `${normalized}/v1/chat/completions`
-}
-
 const normalizeFormData = (data: ProviderFormData): ProviderFormData => ({
   name: data.name.trim(),
   type: data.type,
@@ -135,10 +126,11 @@ const previewRequestUrl = computed(() => {
 
   if (data.type === 'gemini') {
     const model = data.model || '{model}'
-    return `${normalizeBaseUrl(data.baseUrl)}/v1beta/models/${model}:generateContent`
+    // 预览用，apiKey 留空避免泄露
+    return resolveGeminiGenerateUrl(data.baseUrl, model, '').replace(/\?key=$/, '')
   }
 
-  return resolveOpenAIChatPreviewUrl(data.baseUrl)
+  return resolveOpenAIChatCompletionsUrl(data.baseUrl)
 })
 
 const clickableModelOptions = computed(() => {

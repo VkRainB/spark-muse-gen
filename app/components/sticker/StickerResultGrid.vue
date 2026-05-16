@@ -1,85 +1,59 @@
 <script setup lang="ts">
 /**
- * 当前批次结果网格
- * 从 useStickerStore 读 currentBatch.images
- * 功能：单图下载、批量 ZIP 下载、点击灯箱预览
+ * 当前批次结果网格 —— 仅负责头部 + 网格布局
+ * 单图卡片、下载与打包逻辑分别由 StickerImageCard / useStickerDownload 承担。
+ * 图片二进制从 IndexedDB 异步加载。
  */
 
-import JSZip from 'jszip'
 import { useStickerStore } from '../../../stores/sticker'
 import type { StickerImage } from '../../../types/sticker'
-import { downloadImageFromBase64, downloadImageFromBlob } from '../../utils/downloadImage'
 import { getCharacterLabel } from '../../utils/stickerHelpers'
+import { toDataUrl } from '../../utils/base64Utils'
 
 const stickerStore = useStickerStore()
 const { openLightbox } = useLightbox()
-const toast = useAppToast()
+const { isZipping, downloadOne, downloadBatchAsZip } = useStickerDownload()
+const imageDB = useStickerImageDB()
 
 const currentBatch = computed(() => stickerStore.currentBatch)
 
-const images = computed<StickerImage[]>(() => currentBatch.value?.images ?? [])
+/** 当前批次完整图片（含 data），从 IDB 异步加载 */
+const loadedImages = ref<StickerImage[]>([])
+
+const reloadImages = async () => {
+  const refs = currentBatch.value?.images ?? []
+  if (refs.length === 0) {
+    loadedImages.value = []
+    return
+  }
+  try {
+    loadedImages.value = await imageDB.getMany(refs)
+  } catch (err) {
+    console.error('加载图片失败：', err)
+    loadedImages.value = []
+  }
+}
+
+watch(
+  () => [currentBatch.value?.id, currentBatch.value?.images.length] as const,
+  () => { void reloadImages() },
+  { immediate: true },
+)
 
 const characterLabel = computed(() =>
   getCharacterLabel(currentBatch.value?.character) || '未命名角色'
 )
 
-const imageSrc = (img: StickerImage) => {
-  if (!img.data) return ''
-  if (img.data.startsWith('data:')) return img.data
-  return `data:${img.mimeType || 'image/png'};base64,${img.data}`
-}
-
-/** 把 dataURL 中的纯 base64 部分剥出来 */
-const stripDataUrlPrefix = (data: string) => {
-  if (data.startsWith('data:')) {
-    const idx = data.indexOf('base64,')
-    return idx === -1 ? data : data.slice(idx + 7)
-  }
-  return data
-}
-
 const handleDownloadOne = (img: StickerImage, index: number) => {
-  try {
-    const filename = `sticker-${characterLabel.value}-${index + 1}.png`
-    const base64 = stripDataUrlPrefix(img.data)
-    downloadImageFromBase64(base64, filename, img.mimeType || 'image/png')
-  } catch (err) {
-    console.error(err)
-    toast.error('下载失败')
-  }
+  downloadOne(img, `sticker-${characterLabel.value}-${index + 1}.png`)
 }
 
-const isZipping = ref(false)
-
-const handleDownloadAll = async () => {
-  if (images.value.length === 0) return
-  if (isZipping.value) return
-
-  isZipping.value = true
-  try {
-    const zip = new JSZip()
-    const folder = zip.folder(`sticker-${characterLabel.value}`)
-    if (!folder) throw new Error('无法创建 zip 目录')
-
-    images.value.forEach((img, idx) => {
-      const base64 = stripDataUrlPrefix(img.data)
-      folder.file(`sticker-${idx + 1}.png`, base64, { base64: true })
-    })
-
-    const blob = await zip.generateAsync({ type: 'blob' })
-    downloadImageFromBlob(blob, `sticker-${characterLabel.value}.zip`)
-    toast.success('已打包', `共 ${images.value.length} 张`)
-  } catch (err) {
-    console.error(err)
-    toast.error('打包失败')
-  } finally {
-    isZipping.value = false
-  }
-}
+const handleDownloadAll = () =>
+  downloadBatchAsZip(loadedImages.value, `sticker-${characterLabel.value}`, 'sticker')
 
 const handlePreview = (index: number) => {
-  const lightboxImages = images.value.map((img) => ({
-    data: imageSrc(img),
+  const lightboxImages = loadedImages.value.map((img) => ({
+    data: toDataUrl(img.data, img.mimeType),
     mimeType: img.mimeType,
   }))
   openLightbox(lightboxImages[index] ?? '', lightboxImages, index)
@@ -92,11 +66,11 @@ const handlePreview = (index: number) => {
       <div>
         <h3 class="panel-title">结果</h3>
         <span class="panel-sub">
-          {{ currentBatch ? characterLabel : '当前无批次' }} · {{ images.length }} 张
+          {{ currentBatch ? characterLabel : '当前无批次' }} · {{ loadedImages.length }} 张
         </span>
       </div>
       <UButton
-        v-if="images.length > 0"
+        v-if="loadedImages.length > 0"
         color="success"
         size="sm"
         icon="i-heroicons-arrow-down-tray"
@@ -112,28 +86,20 @@ const handlePreview = (index: number) => {
       <p>选择左侧历史批次查看，或在中栏配置后点击批量生成</p>
     </div>
 
-    <div v-else-if="images.length === 0" class="result-empty">
+    <div v-else-if="loadedImages.length === 0" class="result-empty">
       <UIcon name="i-heroicons-photo" class="w-10 h-10 opacity-30" />
       <p>该批次暂未生成图片</p>
     </div>
 
     <div v-else class="result-grid">
-      <div
-        v-for="(img, idx) in images"
+      <StickerImageCard
+        v-for="(img, idx) in loadedImages"
         :key="img.id"
-        class="result-cell"
-        @click="handlePreview(idx)"
-      >
-        <img :src="imageSrc(img)" alt="Sticker" class="result-img" />
-        <button
-          type="button"
-          class="result-download"
-          title="下载"
-          @click.stop="handleDownloadOne(img, idx)"
-        >
-          <UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
-        </button>
-      </div>
+        :image="img"
+        :filename="`sticker-${characterLabel}-${idx + 1}.png`"
+        @preview="handlePreview(idx)"
+        @download="handleDownloadOne(img, idx)"
+      />
     </div>
   </section>
 </template>
@@ -199,47 +165,6 @@ const handlePreview = (index: number) => {
   padding-right: 4px;
 }
 
-.result-cell {
-  position: relative;
-  border-radius: 10px;
-  overflow: hidden;
-  background: var(--bg-tertiary);
-  cursor: zoom-in;
-  aspect-ratio: 1 / 1;
-}
-
-.result-cell:hover .result-download {
-  opacity: 1;
-}
-
-.result-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.result-download {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: none;
-  background: rgba(0, 0, 0, 0.55);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-}
-
-.result-download:hover {
-  background: rgba(0, 0, 0, 0.8);
-}
-
 @media (max-width: 1279px) {
   .result-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -249,10 +174,6 @@ const handlePreview = (index: number) => {
 @media (max-width: 768px) {
   .result-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .result-download {
-    opacity: 1;
   }
 }
 </style>

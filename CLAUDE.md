@@ -31,6 +31,8 @@ pnpm generate         # 静态生成
 - **Pinia v3** + `pinia-plugin-persistedstate` — 状态管理，数据持久化到 localStorage
 - **Tailwind CSS v4** — 通过 `@import "tailwindcss"` 引入
 - **@nuxtjs/color-mode** — 主题切换（system/light/dark）
+- **@nuxt/icon** — 本地品牌图标集合（`brand:*`），与 `UIcon` 并存分工
+- **nuxt-svgo-loader** — SVG 插图组件化（`<SvgoIcon name="illus:*" />`）
 - **@fortaine/fetch-event-source** — SSE 流式传输
 - **marked** — Markdown 解析
 - **JSZip** — 批量下载压缩
@@ -40,13 +42,18 @@ pnpm generate         # 静态生成
 ```
 app/
 ├── api/fetchClient.ts        # API 请求客户端（streamFetch / jsonFetch）
+├── app.config.ts             # @nuxt/icon 别名 / 默认尺寸
+├── assets/
+│   ├── css/
+│   ├── icons/brand/          # @nuxt/icon customCollections（prefix: brand）
+│   └── illustrations/        # nuxt-svgo-loader（prefix: illus，预留）
 ├── components/
 │   ├── chat/                  # 聊天界面（InputBar, MessageItem, MessageList, QuickPromptPanel）
 │   ├── settings/              # 设置（ProviderManager, SettingsPanel, ThemeSwitch）
-│   ├── sticker/               # 贴纸工作台（StickerCharacterPanel, StickerHistoryPanel, StickerResultGrid, StickerVariantPicker）
+│   ├── sticker/               # 贴纸工作台（StickerCharacterPanel, StickerHistoryPanel, StickerImageCard, StickerResultGrid, StickerVariantPicker）
 │   ├── tools/                 # 工具弹层（BananaTool, CustomPromptTool）
 │   └── ui/                    # 通用 UI（ConfirmDialog, Lightbox, SidebarNav, SmartProgressBar）
-├── composables/               # 13 个组合式函数（见下方）
+├── composables/               # 业务组合式函数（见下方）
 ├── layouts/default.vue        # 主布局：侧边栏导航 + 设置面板 + 工具模态框
 ├── pages/
 │   ├── index.vue              # 主聊天/图像生成页
@@ -57,16 +64,21 @@ app/
 │   ├── pinia-persist.client.ts    # Pinia 持久化插件注册
 │   └── vue-warn-filter.client.ts  # 过滤 Suspense 实验性警告
 └── utils/
-    ├── base64Utils.ts
+    ├── base64Utils.ts            # toDataUrl / stripDataUrlPrefix 等
     ├── downloadImage.ts
-    └── stickerHelpers.ts         # Sticker 数据兼容读取助手
+    ├── stickerHelpers.ts         # Sticker 数据兼容读取助手
+    └── urlHelpers.ts             # OpenAI / Gemini 端点解析
+
+public/
+└── favicon.ico
 
 stores/                        # Pinia stores（在 app/ 外，通过 nuxt.config pinia.storesDirs 配置）
 ├── chat.ts                    # 会话和消息管理
+├── chatInput.ts               # 聊天输入桥接（提示词注入与发送）
 ├── prompts.ts                 # 自定义提示词
 ├── provider.ts                # API 渠道配置
 ├── settings.ts                # 应用设置
-├── sticker.ts                 # 贴纸批次、角色、自定义变体
+├── sticker.ts                 # 贴纸批次、角色、自定义变体（仅元数据）
 └── xhs.ts                     # 小红书相关状态
 
 types/                         # TypeScript 类型定义
@@ -94,13 +106,13 @@ types/                         # TypeScript 类型定义
 | `useDevice` | 设备检测（移动端/桌面端） |
 
 **跨组件通信**：
-- `useState("chat-input-bridge")` — 布局与聊天组件间的输入桥接（prompt + send + nonce）
+- `stores/chatInput.ts`（Pinia） — 布局/工具弹层向聊天输入框注入提示词（apply/submit/resubmit）
 - `useState("left-sidebar-collapsed")` — 侧边栏折叠状态
 - `provide/inject` — 布局向子组件注入侧边栏控制函数（toggleLeftSidebar, toggleSettings, closeAllSidebars 等）
 
 **数据持久化**：
-- **Pinia + persistedstate** — stores 自动持久化到 localStorage（注意 sticker store 有批次上限保护：MAX_BATCHES=12, MAX_IMAGES_PER_BATCH=12）
-- **IndexedDB** — `GeminiProDB`（会话、消息）、`XHSHistoryDB`（创作历史）
+- **Pinia + persistedstate** — stores 自动持久化到 localStorage（sticker store 仅存元数据 ref，图片二进制走 IndexedDB）
+- **IndexedDB** — `GeminiProDB`（会话、消息）、`XHSHistoryDB`（创作历史）、`StickerImageDB`（贴纸图片二进制）
 
 ### API 集成
 
@@ -118,6 +130,21 @@ types/                         # TypeScript 类型定义
 - `pages.pattern`: 排除 `**/_components/**`（页面内子组件目录不注册为路由）
 - Pinia stores 目录：`./stores/**`（在 `app/` 外部）
 - 别名：`~/stores` → `./stores`，`~/types` → `./types`
+
+## 资源加载约定
+
+### 图标
+- **UI 图标（Heroicons / mdi 等 Iconify 集合）**：继续使用 Nuxt UI 的 `<UIcon name="i-heroicons-*" />`
+- **品牌图标 / 本地自定义图标**：使用 `@nuxt/icon` 的 `<Icon name="brand:*" />`，SVG 放在 `app/assets/icons/brand/`
+- **新增图标决策**：能在 Iconify 找到 → `UIcon`；自有/品牌 → 放本地 `brand` 集合
+- 高频图标在 `nuxt.config.ts` 的 `icon.clientBundle.icons` 中预打包
+
+### SVG 插图
+- 复杂插图 / 需深度 CSS 控制：使用 `nuxt-svgo-loader` 的 `<SvgoIcon name="illus:*" />`，文件放 `app/assets/illustrations/`
+
+### 位图（PNG/JPG/WebP）
+- 本项目位图绝大部分是用户上传 / AI 生成的 dataURL / blob URL，全部使用原生 `<img>`
+- 不引入 `@nuxt/image`：SPA 模式无 IPX server，且远程图域名（如 BananaTool 提示词缩略）不可枚举
 
 ## 文档
 

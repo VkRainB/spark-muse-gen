@@ -1,3 +1,31 @@
+// 判断是否为 data URL
+export function isDataUrl(s: string): boolean {
+  return typeof s === 'string' && s.startsWith('data:')
+}
+
+// 判断是否为 http(s) URL
+export function isHttpUrl(s: string): boolean {
+  return typeof s === 'string' && (s.startsWith('http://') || s.startsWith('https://'))
+}
+
+/**
+ * 将任意来源（base64 纯字符串 / dataURL / http URL）规范化为可直接用于 <img src> 的 dataURL 或 URL。
+ * - 已是 dataURL 或 http URL：原样返回
+ * - 纯 base64：补全为 `data:${mime};base64,${data}`
+ */
+export function toDataUrl(data: string, mimeType: string = 'image/png'): string {
+  if (!data) return ''
+  if (isDataUrl(data) || isHttpUrl(data)) return data
+  return `data:${mimeType || 'image/png'};base64,${data}`
+}
+
+/** 把 dataURL 中的纯 base64 部分剥出来（如果不是 dataURL 原样返回） */
+export function stripDataUrlPrefix(data: string): string {
+  if (!isDataUrl(data)) return data
+  const idx = data.indexOf('base64,')
+  return idx === -1 ? data : data.slice(idx + 7)
+}
+
 // Base64 转 Blob URL
 export function base64ToBlobUrl(base64: string, mimeType: string = 'image/png'): string {
   const blob = base64ToBlob(base64, mimeType)

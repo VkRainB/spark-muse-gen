@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Message } from "../../../types";
+import { toDataUrl } from "../../utils/base64Utils";
 
 const props = defineProps<{
   messages: Message[];
@@ -55,12 +56,7 @@ const displayMessages = computed(() => {
   return base
 })
 
-const getImageSrc = (image: { data: string; mimeType: string }) => {
-  if (image.data.startsWith("data:") || image.data.startsWith("http")) {
-    return image.data;
-  }
-  return `data:${image.mimeType};base64,${image.data}`;
-};
+const getImageSrc = (image: { data: string; mimeType: string }) => toDataUrl(image.data, image.mimeType);
 
 const handleImageClick = (image: { data: string; mimeType: string }) => {
   openLightbox?.(getImageSrc(image));

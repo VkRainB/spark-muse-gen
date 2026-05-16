@@ -2,15 +2,16 @@ import { defineStore } from 'pinia'
 import type {
   StickerBatch,
   StickerCharacter,
-  StickerImage,
+  StickerImageRef,
   StickerVariant,
 } from '../types/sticker'
 
 /**
- * 批次保留上限：localStorage 容量保护。
- * 计算依据：30 批次 × 24 图 × 200KB = 144MB 远超 localStorage 5MB。
- * 简化策略：上限设为 12 批次 × 12 图 ≈ 28MB，仍超 localStorage 但配合 SSR=false + 用户主动清理可接受。
- * 真正的图片落盘建议未来用 IndexedDB（参考已有 GeminiProDB / XHSHistoryDB）。
+ * 容量上限。
+ *
+ * 图片二进制已落入 IndexedDB（见 app/composables/useStickerImageDB.ts），
+ * store 中仅持久化元数据（StickerImageRef），单批次 12 张 × 元数据约 200B ≈ 2.4KB。
+ * 上限主要起 UX 防失控作用，而非容量保护。
  */
 export const MAX_BATCHES = 12
 export const MAX_IMAGES_PER_BATCH = 12
@@ -85,13 +86,16 @@ export const useStickerStore = defineStore('sticker', {
   },
 
   actions: {
-    /** 创建一个新批次并切换为当前批次，返回 batchId */
+    /**
+     * 创建一个新批次并切换为当前批次。
+     * 若超出 MAX_BATCHES，淘汰最旧批次并返回其 image id 列表，调用方负责清理 IndexedDB。
+     */
     createBatch(payload: {
       character: StickerCharacter
       background: 'white' | 'transparent'
       emotions: string[]
       actions: string[]
-    }): string {
+    }): { batchId: string; droppedImageIds: string[] } {
       const id = genId()
       const batch: StickerBatch = {
         id,
@@ -110,31 +114,39 @@ export const useStickerStore = defineStore('sticker', {
       this.batches.unshift(batch)
 
       // 容量保护：超出后淘汰最旧的批次
+      const droppedImageIds: string[] = []
       if (this.batches.length > MAX_BATCHES) {
-        this.batches.length = MAX_BATCHES
+        const dropped = this.batches.splice(MAX_BATCHES)
+        for (const b of dropped) {
+          for (const img of b.images) droppedImageIds.push(img.id)
+        }
       }
 
       this.currentBatchId = id
-      return id
+      return { batchId: id, droppedImageIds }
     },
 
-    /** 把若干图片追加到指定批次（按上限截断） */
-    addImagesToBatch(batchId: string, images: StickerImage[]): void {
+    /** 把若干图片引用追加到指定批次（按上限截断） */
+    addImagesToBatch(batchId: string, refs: StickerImageRef[]): void {
       const batch = this.batches.find((b) => b.id === batchId)
       if (!batch) return
       const remaining = MAX_IMAGES_PER_BATCH - batch.images.length
       if (remaining <= 0) return
-      batch.images.push(...images.slice(0, remaining))
+      batch.images.push(...refs.slice(0, remaining))
     },
 
-    /** 删除单个批次；如果删的是当前批次则切换到最新一个或 null */
-    deleteBatch(batchId: string): void {
+    /**
+     * 删除单个批次。
+     * 返回被删除批次中所有 image id，调用方负责清理 IndexedDB。
+     */
+    deleteBatch(batchId: string): string[] {
       const idx = this.batches.findIndex((b) => b.id === batchId)
-      if (idx === -1) return
-      this.batches.splice(idx, 1)
+      if (idx === -1) return []
+      const removed = this.batches.splice(idx, 1)[0]
       if (this.currentBatchId === batchId) {
         this.currentBatchId = this.batches[0]?.id ?? null
       }
+      return removed ? removed.images.map((img) => img.id) : []
     },
 
     /** 切换当前批次（传 null 清空选中） */
@@ -147,7 +159,7 @@ export const useStickerStore = defineStore('sticker', {
       if (exists) this.currentBatchId = batchId
     },
 
-    /** 清空全部批次（带确认应在 UI 层做） */
+    /** 清空全部批次。调用方负责清空 IndexedDB。 */
     clearAll(): void {
       this.batches = []
       this.currentBatchId = null

@@ -3,6 +3,7 @@ import type {
   StickerCharacterReference,
   StickerCharacterValue,
 } from '../../types/sticker'
+import { toDataUrl } from './base64Utils'
 
 /**
  * 角色字段读取助手
@@ -32,8 +33,7 @@ export function getCharacterReference(
 export function getCharacterReferenceSrc(c: StickerCharacterValue | undefined): string {
   const img = getCharacterReference(c)
   if (!img?.data) return ''
-  if (img.data.startsWith('data:') || img.data.startsWith('http')) return img.data
-  return `data:${img.mimeType || 'image/png'};base64,${img.data}`
+  return toDataUrl(img.data, img.mimeType)
 }
 
 export function hasCharacterContent(c: StickerCharacterValue | undefined): boolean {

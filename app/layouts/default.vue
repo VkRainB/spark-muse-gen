@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { useProviderStore } from '../../stores/provider'
+import { useChatInputStore } from '../../stores/chatInput'
 
 const { isDark, toggleTheme } = useTheme();
 const chat = useChat();
 const route = useRoute();
 const providerStore = useProviderStore();
+const chatInputStore = useChatInputStore();
 const { isMobile } = useDevice();
 
 const providerSelectorOpen = ref(false);
@@ -40,15 +42,6 @@ onUnmounted(() => {
 
 const bananaToolOpen = ref(false);
 const customPromptToolOpen = ref(false);
-const chatInputBridge = useState<{
-  prompt: string;
-  send: boolean;
-  nonce: number;
-}>("chat-input-bridge", () => ({
-  prompt: "",
-  send: false,
-  nonce: 0,
-}));
 
 // 侧边栏状态
 const leftSidebarOpen = ref(false);
@@ -194,11 +187,11 @@ const applyPromptToInput = async (prompt: string, sendDirect = false) => {
     await navigateTo("/");
   }
 
-  chatInputBridge.value = {
-    prompt: normalizedPrompt,
-    send: sendDirect,
-    nonce: Date.now(),
-  };
+  if (sendDirect) {
+    chatInputStore.submit(normalizedPrompt);
+  } else {
+    chatInputStore.apply(normalizedPrompt);
+  }
 };
 
 const handleBananaApply = (prompt: string) => {

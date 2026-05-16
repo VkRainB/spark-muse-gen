@@ -1,5 +1,6 @@
-import type { StickerCharacter, StickerImage, StickerVariant } from '../../types/sticker'
+import type { StickerCharacter, StickerImage, StickerImageRef, StickerVariant } from '../../types/sticker'
 import { useStickerStore } from '../../stores/sticker'
+import { toDataUrl } from '../utils/base64Utils'
 
 /** 内置预设表情 / 动作 */
 const PRESET_EMOTIONS: ReadonlyArray<StickerVariant> = [
@@ -35,8 +36,7 @@ interface StickerOptions {
 const referenceFromCharacter = (character: StickerCharacter): string | undefined => {
   const img = character.referenceImage
   if (!img?.data) return undefined
-  if (img.data.startsWith('data:') || img.data.startsWith('http')) return img.data
-  return `data:${img.mimeType || 'image/png'};base64,${img.data}`
+  return toDataUrl(img.data, img.mimeType)
 }
 
 /** 取变体的 prompt 片段：自定义 prompt 优先，否则基于 label 生成 */
@@ -50,6 +50,7 @@ export function useStickerMode() {
   const { generateImage } = useImageGeneration()
   const toast = useAppToast()
   const stickerStore = useStickerStore()
+  const imageDB = useStickerImageDB()
 
   /** 预设 + 用户自定义合并；模板中作为 array prop 直接消费（自动 unwrap） */
   const emotions = computed<StickerVariant[]>(() => [
@@ -137,13 +138,17 @@ export function useStickerMode() {
       return { batchId: null as string | null, results: [] }
     }
 
-    // 创建批次（自动设为 currentBatch），返回 batchId 供调用方追踪
-    const batchId = stickerStore.createBatch({
+    // 创建批次（自动设为 currentBatch），返回 batchId 供调用方追踪。
+    // 同时可能淘汰最旧批次的图片，需同步从 IDB 清理。
+    const { batchId, droppedImageIds } = stickerStore.createBatch({
       character,
       background,
       emotions: [...selectedEmotions],
       actions: [...selectedActions],
     })
+    if (droppedImageIds.length > 0) {
+      void imageDB.removeMany(droppedImageIds)
+    }
 
     const results: Array<{
       type: 'emotion' | 'action'
@@ -170,7 +175,25 @@ export function useStickerMode() {
           emotionId: item.type === 'emotion' ? item.id : undefined,
           actionId: item.type === 'action' ? item.id : undefined,
         }))
-        stickerStore.addImagesToBatch(batchId, stickerImages)
+
+        // 先写 IndexedDB（完整数据），写入失败则跳过本批，不污染 store
+        try {
+          await imageDB.putMany(stickerImages)
+        } catch (err) {
+          console.error('IndexedDB 写入失败：', err)
+          toast.error('图片保存失败', '可能是浏览器存储已满')
+          continue
+        }
+
+        // store 仅保留元数据引用
+        const refs: StickerImageRef[] = stickerImages.map((img) => ({
+          id: img.id,
+          mimeType: img.mimeType,
+          createdAt: img.createdAt,
+          emotionId: img.emotionId,
+          actionId: img.actionId,
+        }))
+        stickerStore.addImagesToBatch(batchId, refs)
 
         results.push({
           ...item,

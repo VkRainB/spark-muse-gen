@@ -1,26 +1,10 @@
 import { defineStore } from 'pinia'
 import type { Provider, ProviderFormData } from '../types/provider'
-
-const normalizeBaseUrl = (url: string) => url.trim().replace(/\/+$/, '')
-
-const resolveOpenAIModelsUrl = (baseUrl: string) => {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) return '/v1/models'
-  if (/\/chat\/completions$/i.test(normalized)) {
-    return normalized.replace(/\/chat\/completions$/i, '/models')
-  }
-  if (/\/models$/i.test(normalized)) return normalized
-  if (/\/v\d+$/i.test(normalized)) return `${normalized}/models`
-  return `${normalized}/v1/models`
-}
-
-const resolveOpenAIChatCompletionsUrl = (baseUrl: string) => {
-  const normalized = normalizeBaseUrl(baseUrl)
-  if (!normalized) return '/v1/chat/completions'
-  if (/\/chat\/completions$/i.test(normalized)) return normalized
-  if (/\/v\d+$/i.test(normalized)) return `${normalized}/chat/completions`
-  return `${normalized}/v1/chat/completions`
-}
+import {
+  resolveOpenAIModelsUrl,
+  resolveOpenAIChatCompletionsUrl,
+  resolveGeminiModelsUrl
+} from '../app/utils/urlHelpers'
 
 interface OpenAIModelsResponse {
   data?: Array<{
@@ -133,7 +117,7 @@ export const useProviderStore = defineStore('provider', {
         }
 
         if (provider.type === 'gemini') {
-          const url = `${provider.baseUrl}/v1beta/models?key=${provider.apiKey}`
+          const url = resolveGeminiModelsUrl(provider.baseUrl, provider.apiKey)
           const response = await fetch(url, { headers })
           return response.ok
         }

@@ -1,22 +1,16 @@
 <script setup lang="ts">
 import { useSettingsStore } from "../../../stores/settings";
 import { useChatStore } from "../../../stores/chat";
+import { useChatInputStore } from "../../../stores/chatInput";
 import type { AspectRatio, Resolution } from "../../../stores/settings";
 
 const settingsStore = useSettingsStore();
 const chatStore = useChatStore();
+const chatInputStore = useChatInputStore();
 const { generateImage, isSessionGenerating, cancelGeneration } =
   useImageGeneration();
 const { saveToFileSystem, isEnabled: autoSaveEnabled } = useFileSystem();
 const chat = useChat();
-const inputBridge = useState<{ prompt: string; send: boolean; resend?: boolean; nonce: number }>(
-  "chat-input-bridge",
-  () => ({
-    prompt: "",
-    send: false,
-    nonce: 0,
-  }),
-);
 
 const emit = defineEmits<{
   generated: [images: Array<{ data: string; mimeType: string }>];
@@ -225,17 +219,18 @@ const triggerFileInput = () => {
 };
 
 watch(
-  () => inputBridge.value.nonce,
-  async (nonce, previousNonce) => {
-    if (!nonce || nonce === previousNonce) return;
+  () => chatInputStore.request?.token,
+  async (token, previousToken) => {
+    const req = chatInputStore.request;
+    if (!req || !token || token === previousToken) return;
 
-    prompt.value = inputBridge.value.prompt || "";
+    prompt.value = req.prompt || "";
     await nextTick();
     adjustTextareaHeight();
     textareaRef.value?.focus();
 
-    if (inputBridge.value.send && prompt.value.trim()) {
-      if (inputBridge.value.resend) {
+    if (req.mode !== "apply" && prompt.value.trim()) {
+      if (req.mode === "resend") {
         await resendMessage();
       } else {
         await sendMessage();

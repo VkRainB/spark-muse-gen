@@ -1,14 +1,11 @@
 <script setup lang="ts">
+import { toDataUrl } from '../../utils/base64Utils';
+
 const { isOpen, images, currentIndex, closeLightbox } = useLightbox();
 
 const currentImage = computed(() => images.value[currentIndex.value]);
 
-const getImageSrc = (image: { data: string; mimeType?: string }) => {
-  if (image.data.startsWith("data:") || image.data.startsWith("http")) {
-    return image.data;
-  }
-  return `data:${image.mimeType || "image/png"};base64,${image.data}`;
-};
+const getImageSrc = (image: { data: string; mimeType?: string }) => toDataUrl(image.data, image.mimeType);
 
 const prev = () => {
   currentIndex.value =

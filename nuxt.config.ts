@@ -23,10 +23,52 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/color-mode',
     '@nuxt/ui',
-    '@pinia/nuxt'
+    '@pinia/nuxt',
+    '@nuxt/icon',
+    'nuxt-svgo-loader'
   ],
 
   css: ['~/assets/css/main.css'],
+
+  // ── 图标系统：本地品牌图标集（与 Nuxt UI 的 UIcon 并存，分工不同） ──
+  icon: {
+    provider: 'server',
+    clientBundle: {
+      icons: [
+        // 导航 / 通用 UI
+        'heroicons:bars-3',
+        'heroicons:chevron-down',
+        'heroicons:cog-6-tooth',
+        'heroicons:cog-6-tooth-solid',
+        'heroicons:plus',
+        'heroicons:x-mark',
+        // 输入栏
+        'heroicons:paper-airplane',
+        'heroicons:arrow-up-tray',
+        'heroicons:adjustments-horizontal',
+        'heroicons:stop',
+        // 通用动作
+        'heroicons:arrow-down-tray',
+        'heroicons:trash',
+        'heroicons:arrow-path',
+        'heroicons:photo',
+        'heroicons:sparkles',
+        // 品牌
+        'mdi:github'
+      ],
+      includeCustomCollections: true
+    },
+    customCollections: [
+      { prefix: 'brand', dir: './app/assets/icons/brand' }
+    ]
+  },
+
+  // ── SVG 插图加载器（编译时内联，预留命名空间） ──
+  svgoLoader: {
+    namespaces: [
+      { prefix: 'illus', dir: './app/assets/illustrations' }
+    ]
+  },
 
   colorMode: {
     preference: 'system',

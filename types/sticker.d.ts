@@ -2,23 +2,28 @@
  * Sticker 工作台数据结构
  *
  * 持久化策略：
- * - 通过 pinia-plugin-persistedstate 写入 localStorage
- * - 容量保护：单 store 最多保留 MAX_BATCHES 个批次，单批次最多 MAX_IMAGES_PER_BATCH 张图
+ * - store（Pinia + localStorage）仅存元数据（StickerImageRef），约束在 KB 级
+ * - 图片二进制（base64 data）写入 IndexedDB `StickerImageDB`，由 useStickerImageDB 管理
+ * - 删除批次时由调用方协调清理 IndexedDB 中对应记录
  *
  * 兼容性：
  * - StickerBatch.character 保留 string 形式以兼容历史数据；新批次统一写入 StickerCharacter 对象
  * - 读取请通过 app/utils/stickerHelpers.ts 中的助手函数，避免在组件内做 typeof 判断
  */
 
-export interface StickerImage {
+/** 图片元数据 —— 持久化到 store / localStorage 的部分（无 data 字段） */
+export interface StickerImageRef {
   id: string
-  /** base64 字符串（不含 data URL 前缀），mimeType 单独存 */
-  data: string
   mimeType: string
   createdAt: number
   /** 该图所属的表情 / 动作维度，便于在结果网格上分类 */
   emotionId?: string
   actionId?: string
+}
+
+/** 完整图片 —— 持久化到 IndexedDB；data 为 base64 字符串（不含 dataURL 前缀） */
+export interface StickerImage extends StickerImageRef {
+  data: string
 }
 
 /** 角色参考图（文字描述的可选补充） */
@@ -57,6 +62,7 @@ export interface StickerBatch {
   emotions: string[]
   /** 该批次发起时选中的 action ids */
   actions: string[]
-  images: StickerImage[]
+  /** 仅存元数据；完整 data 通过 useStickerImageDB 按 id 加载 */
+  images: StickerImageRef[]
   createdAt: number
 }
