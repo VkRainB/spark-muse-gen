@@ -81,13 +81,14 @@ export default defineNuxtConfig({
   },
 
   alias: {
+    '@': './app',
     '~/stores': './stores',
     '~/types': './types'
   },
 
   app: {
     head: {
-      title: 'Gemini 3 Pro Image Preview',
+      title: '创作工作台',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
