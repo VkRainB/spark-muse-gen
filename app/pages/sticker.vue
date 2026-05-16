@@ -133,13 +133,16 @@ const openHistory = () => {
 
 <template>
   <div class="sticker-page">
-    <!-- 顶部工具栏（窄屏才显示，提供"打开历史"按钮） -->
+    <!-- 顶部工具栏（窄屏才显示） -->
     <header v-if="!showHistoryColumn" class="sticker-mobile-bar">
       <button class="mobile-history-btn" type="button" @click="openHistory">
         <UIcon name="i-heroicons-clock" class="w-4 h-4" />
         <span>历史 ({{ stickerStore.sortedBatches.length }})</span>
       </button>
-      <h1 class="mobile-title">表情包工坊</h1>
+      <h1 class="mobile-title">
+        <UIcon name="i-heroicons-face-smile" class="w-4 h-4" />
+        表情包工坊
+      </h1>
     </header>
 
     <!-- 三栏 grid -->
@@ -173,6 +176,7 @@ const openHistory = () => {
               :disabled="!canGenerateSingle"
               icon="i-heroicons-sparkles"
               variant="outline"
+              class="cta-btn-single"
               @click="handleGenerateSingle"
             >
               生成单张
@@ -180,7 +184,7 @@ const openHistory = () => {
             <UButton
               :disabled="!canGenerateBatch"
               icon="i-heroicons-squares-2x2"
-              color="primary"
+              class="cta-btn-batch"
               @click="handleGenerateBatch"
             >
               批量生成（{{ totalSelected }}）
@@ -218,7 +222,7 @@ const openHistory = () => {
   min-height: 0;
   background: var(--bg-color);
   padding: 16px;
-  gap: 12px;
+  gap: 14px;
   overflow: hidden;
 }
 
@@ -230,6 +234,9 @@ const openHistory = () => {
 }
 
 .mobile-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main);
@@ -244,20 +251,21 @@ const openHistory = () => {
   border: 1px solid var(--border-color);
   background: var(--card-bg);
   color: var(--text-main);
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 13px;
   cursor: pointer;
-  transition: border-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .mobile-history-btn:hover {
   border-color: var(--accent-blue);
+  transform: translateY(-1px);
 }
 
 .sticker-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) minmax(360px, 480px);
-  gap: 12px;
+  gap: 14px;
   flex: 1 1 auto;
   min-height: 0;
 }
@@ -274,7 +282,6 @@ const openHistory = () => {
 }
 
 .col-history {
-  /* 历史栏整列高度交给子组件控制 */
   overflow: hidden;
 }
 
@@ -282,7 +289,7 @@ const openHistory = () => {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   padding-right: 4px;
 }
 
@@ -290,14 +297,15 @@ const openHistory = () => {
   overflow: hidden;
 }
 
+/* CTA 区域 */
 .cta-bar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 12px 16px;
+  gap: 10px;
+  padding: 14px 16px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
-  background: var(--card-bg);
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--card-bg), color-mix(in srgb, var(--accent-blue) 3%, var(--card-bg)));
   position: sticky;
   bottom: 0;
 }
@@ -312,9 +320,36 @@ const openHistory = () => {
   flex-wrap: wrap;
 }
 
+.cta-btn-single {
+  transition: all 0.2s ease;
+}
+
+.cta-btn-single:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-blue) 20%, transparent);
+}
+
+.cta-btn-batch {
+  background: linear-gradient(135deg, var(--accent-blue), color-mix(in srgb, var(--accent-purple) 40%, var(--accent-blue)));
+  border: none;
+  color: #fff;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.cta-btn-batch:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--accent-blue) 30%, transparent);
+}
+
+.cta-btn-batch:disabled {
+  opacity: 0.55;
+}
+
 @media (max-width: 767px) {
   .sticker-page {
     padding: 12px;
+    gap: 10px;
   }
 
   .sticker-grid,

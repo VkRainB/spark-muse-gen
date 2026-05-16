@@ -129,9 +129,10 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
 <template>
   <section class="sticker-history-panel">
     <header class="history-head">
-      <div>
+      <div class="history-head-left">
+        <UIcon name="i-heroicons-clock" class="history-head-icon" />
         <h3 class="panel-title">历史</h3>
-        <span class="panel-sub">{{ stickerStore.sortedBatches.length }} 批</span>
+        <span v-if="stickerStore.sortedBatches.length > 0" class="history-count-badge">{{ stickerStore.sortedBatches.length }}</span>
       </div>
       <button
         v-if="stickerStore.sortedBatches.length > 0"
@@ -146,9 +147,11 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
     </header>
 
     <div v-if="stickerStore.sortedBatches.length === 0" class="history-empty">
-      <UIcon name="i-heroicons-clock" class="w-8 h-8 opacity-30" />
-      <p>暂无历史批次</p>
-      <p class="empty-tip">完成一次批量生成后，结果会自动保存在这里。</p>
+      <div class="history-empty-icon">
+        <UIcon name="i-heroicons-clock" class="w-6 h-6" />
+      </div>
+      <p class="history-empty-title">暂无历史</p>
+      <p class="empty-tip">完成一次批量生成后，结果会自动保存在这里</p>
     </div>
 
     <ul v-else class="history-list">
@@ -167,10 +170,9 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
         </div>
         <div class="history-meta">
           <div class="history-title">{{ getCharacterLabel(batch.character) }}</div>
-          <div class="history-sub">
-            <span>{{ variantSummary(batch) }}</span>
-            <span class="dot">·</span>
-            <span>{{ batch.images.length }} 张</span>
+          <div class="history-tags">
+            <span class="history-tag">{{ variantSummary(batch) }}</span>
+            <span class="history-tag">{{ batch.images.length }} 张</span>
           </div>
           <div class="history-time">{{ formatTime(batch.createdAt) }}</div>
         </div>
@@ -208,9 +210,9 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 14px 14px 16px;
+  padding: 16px 14px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--card-bg);
   height: 100%;
   min-height: 0;
@@ -218,9 +220,21 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
 
 .history-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
+}
+
+.history-head-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-head-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-blue);
 }
 
 .panel-title {
@@ -230,9 +244,18 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   color: var(--text-main);
 }
 
-.panel-sub {
-  font-size: 11px;
-  color: var(--text-sub);
+.history-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent-blue) 12%, transparent);
+  color: var(--accent-blue);
+  font-size: 10px;
+  font-weight: 600;
 }
 
 .clear-btn {
@@ -241,18 +264,20 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   gap: 4px;
   background: none;
   border: none;
-  color: #d93025;
+  color: var(--text-sub);
   cursor: pointer;
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 6px;
-  transition: background 0.2s;
+  transition: all 0.15s ease;
 }
 
 .clear-btn:hover {
-  background: color-mix(in srgb, #fca5a5 35%, transparent);
+  color: #d93025;
+  background: color-mix(in srgb, #fca5a5 25%, transparent);
 }
 
+/* 空状态 */
 .history-empty {
   flex: 1;
   display: flex;
@@ -265,16 +290,33 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   padding: 32px 8px;
 }
 
-.history-empty p {
+.history-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
+  color: var(--accent-blue);
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+
+.history-empty-title {
   margin: 0;
   font-size: 13px;
+  font-weight: 600;
+  color: var(--text-main);
 }
 
 .empty-tip {
-  font-size: 11px !important;
+  margin: 0;
+  font-size: 11px;
   color: var(--text-tertiary, var(--text-sub));
 }
 
+/* 列表 */
 .history-list {
   list-style: none;
   margin: 0;
@@ -297,11 +339,17 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   border-radius: 10px;
   background: var(--bg-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .history-item:hover {
-  border-color: var(--accent-blue);
+  border-color: color-mix(in srgb, var(--accent-blue) 50%, var(--border-color));
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.dark .history-item:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .history-item:hover .history-delete-btn {
@@ -310,16 +358,22 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
 
 .history-item.active {
   border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-secondary));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-blue) 8%, var(--bg-secondary)), color-mix(in srgb, var(--accent-purple) 4%, var(--bg-secondary)));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-blue) 10%, transparent);
 }
 
 .history-thumb {
   flex-shrink: 0;
   width: 44px;
   height: 44px;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   background: var(--bg-tertiary);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.dark .history-thumb {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .history-thumb img {
@@ -341,7 +395,7 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 
 .history-title {
@@ -353,30 +407,34 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
   text-overflow: ellipsis;
 }
 
-.history-sub {
-  font-size: 11px;
-  color: var(--text-sub);
+.history-tags {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.dot {
-  opacity: 0.5;
+.history-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
+  color: var(--text-sub);
+  font-size: 10px;
 }
 
 .history-time {
   font-size: 11px;
-  color: var(--text-sub);
+  color: var(--text-tertiary, var(--text-sub));
 }
 
 .history-delete-btn {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: none;
   background: transparent;
-  border-radius: 6px;
+  border-radius: 8px;
   color: var(--text-sub);
   cursor: pointer;
   display: flex;
@@ -387,7 +445,7 @@ const variantSummary = (batch: { emotions: string[]; actions: string[] }) => {
 }
 
 .history-delete-btn:hover {
-  background: color-mix(in srgb, #fca5a5 28%, transparent);
+  background: color-mix(in srgb, #fca5a5 25%, transparent);
   color: #d93025;
 }
 

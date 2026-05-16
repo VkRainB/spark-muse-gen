@@ -582,7 +582,17 @@ onUnmounted(() => {
   gap: 0;
   justify-content: center;
   border-radius: 12px;
-  background: var(--card-bg);
+  background: transparent;
+}
+
+.sidebar-nav-content.collapsed :deep(a.nav-card.router-link-active),
+.sidebar-nav-content.collapsed :deep(a.nav-card.router-link-exact-active) {
+  background: var(--bg-tertiary);
+}
+
+.sidebar-nav-content.collapsed :deep(a.nav-card.router-link-active::before),
+.sidebar-nav-content.collapsed :deep(a.nav-card.router-link-exact-active::before) {
+  display: none;
 }
 
 .sidebar-nav-content.collapsed :deep(.nav-card:hover) {
@@ -646,8 +656,26 @@ a.nav-card {
 
 a.nav-card.router-link-active,
 a.nav-card.router-link-exact-active {
-  border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue) 10%, var(--card-bg));
+  background: var(--bg-tertiary);
+  border-color: transparent;
+  position: relative;
+}
+
+a.nav-card.router-link-active::before,
+a.nav-card.router-link-exact-active::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background: var(--primary-color);
+}
+
+a.nav-card.router-link-active .nav-card-title,
+a.nav-card.router-link-exact-active .nav-card-title {
+  font-weight: 600;
 }
 
 .collapsed-session-anchor {
@@ -740,10 +768,6 @@ a.nav-card.router-link-exact-active {
 
 .clear-btn:hover {
   background: color-mix(in srgb, #fca5a5 35%, transparent);
-}
-
-:deep(.dark) .clear-btn:hover {
-  background: rgba(217, 48, 37, 0.2);
 }
 
 .empty-sessions {

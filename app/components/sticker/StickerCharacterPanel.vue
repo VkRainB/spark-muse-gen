@@ -79,24 +79,28 @@ const removeReference = () => {
 </script>
 
 <template>
-  <section class="sticker-character-panel">
+  <section class="sticker-character-panel w-full">
     <header class="panel-head">
-      <h3 class="panel-title">角色配置</h3>
+      <div class="panel-head-row">
+        <UIcon name="i-heroicons-user-circle" class="panel-head-icon" />
+        <h3 class="panel-title">角色配置</h3>
+      </div>
       <p class="panel-tip">
         文字与参考图至少填一项；同时填写时，参考图定义外观，文字补充细节。
       </p>
     </header>
 
-    <UFormField label="角色描述">
+    <UFormField label="角色描述" class="w-full">
       <UTextarea
         v-model="description"
         :rows="3"
         autoresize
+        class="w-full"
         placeholder="例如：一只橙色的小猫，戴着红色围巾，圆圆胖胖"
       />
     </UFormField>
 
-    <UFormField label="参考图（可选）">
+    <UFormField label="参考图（可选）" class="w-full">
       <div v-if="character.referenceImage" class="ref-card">
         <img
           :src="character.referenceImage.data"
@@ -104,7 +108,10 @@ const removeReference = () => {
           class="ref-thumb"
         />
         <div class="ref-meta">
-          <span class="ref-hint">已上传，将作为外观锚点</span>
+          <span class="ref-hint">
+            <UIcon name="i-heroicons-check-badge" class="w-3.5 h-3.5" />
+            已上传，将作为外观锚点
+          </span>
           <div class="ref-actions">
             <button
               type="button"
@@ -134,11 +141,13 @@ const removeReference = () => {
         :disabled="isProcessing"
         @click="triggerUpload"
       >
-        <UIcon
-          :name="isProcessing ? 'i-heroicons-arrow-path' : 'i-heroicons-photo'"
-          class="w-5 h-5"
-          :class="{ 'animate-spin': isProcessing }"
-        />
+        <div class="ref-upload-icon-wrap">
+          <UIcon
+            :name="isProcessing ? 'i-heroicons-arrow-path' : 'i-heroicons-photo'"
+            class="w-5 h-5"
+            :class="{ 'animate-spin': isProcessing }"
+          />
+        </div>
         <div class="ref-upload-text">
           <span class="ref-upload-title">
             {{ isProcessing ? '处理中…' : '上传参考图' }}
@@ -158,13 +167,21 @@ const removeReference = () => {
 
     <UFormField label="背景">
       <div class="bg-options">
-        <label class="bg-option">
-          <input v-model="background" type="radio" value="white" />
-          <span>白色背景</span>
+        <label
+          class="bg-card"
+          :class="{ active: background === 'white' }"
+        >
+          <input v-model="background" type="radio" value="white" class="sr-only" />
+          <div class="bg-preview bg-preview-white"></div>
+          <span class="bg-card-label">白色</span>
         </label>
-        <label class="bg-option">
-          <input v-model="background" type="radio" value="transparent" />
-          <span>透明背景</span>
+        <label
+          class="bg-card"
+          :class="{ active: background === 'transparent' }"
+        >
+          <input v-model="background" type="radio" value="transparent" class="sr-only" />
+          <div class="bg-preview bg-preview-transparent"></div>
+          <span class="bg-card-label">透明</span>
         </label>
       </div>
     </UFormField>
@@ -175,17 +192,36 @@ const removeReference = () => {
 .sticker-character-panel {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 16px 18px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--card-bg);
+}
+
+/* 确保表单控件撑满卡片宽度 */
+.sticker-character-panel :deep(.u-form-field),
+.sticker-character-panel :deep(textarea),
+.sticker-character-panel :deep(.u-textarea) {
+  width: 100%;
 }
 
 .panel-head {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.panel-head-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.panel-head-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-blue);
 }
 
 .panel-title {
@@ -202,20 +238,82 @@ const removeReference = () => {
   line-height: 1.5;
 }
 
+/* 背景选择器 - 卡片式 */
 .bg-options {
   display: flex;
-  gap: 16px;
+  gap: 10px;
 }
 
-.bg-option {
+.bg-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
+  padding: 10px 16px;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
   cursor: pointer;
-  font-size: 13px;
+  transition: all 0.2s ease;
+  flex: 1;
+}
+
+.bg-card:hover {
+  border-color: color-mix(in srgb, var(--accent-blue) 50%, var(--border-color));
+}
+
+.bg-card.active {
+  border-color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 6%, var(--bg-secondary));
+}
+
+.bg-preview {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+}
+
+.bg-preview-white {
+  background: #ffffff;
+}
+
+.bg-preview-transparent {
+  background-image:
+    linear-gradient(45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(-45deg, #e2e8f0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e2e8f0 75%),
+    linear-gradient(-45deg, transparent 75%, #e2e8f0 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.dark .bg-preview-transparent {
+  background-image:
+    linear-gradient(45deg, #334155 25%, transparent 25%),
+    linear-gradient(-45deg, #334155 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #334155 75%),
+    linear-gradient(-45deg, transparent 75%, #334155 75%);
+}
+
+.bg-card-label {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-main);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+/* 参考图卡片 */
 .ref-card {
   display: flex;
   gap: 12px;
@@ -230,9 +328,14 @@ const removeReference = () => {
   width: 72px;
   height: 72px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg-tertiary);
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.dark .ref-thumb {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .ref-meta {
@@ -245,8 +348,11 @@ const removeReference = () => {
 }
 
 .ref-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
-  color: var(--text-sub);
+  color: var(--primary-color);
 }
 
 .ref-actions {
@@ -259,8 +365,8 @@ const removeReference = () => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
-  border-radius: 6px;
+  padding: 5px 12px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
   background: var(--card-bg);
   color: var(--text-main);
@@ -290,29 +396,43 @@ const removeReference = () => {
   color: #d93025;
 }
 
+/* 上传按钮 */
 .ref-upload {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 14px;
-  border: 1px dashed var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-secondary);
+  padding: 14px;
+  border: 1.5px dashed var(--border-color);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent-blue) 3%, var(--bg-secondary));
   color: var(--text-main);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
   width: 100%;
   text-align: left;
 }
 
 .ref-upload:hover:not(:disabled) {
   border-color: var(--accent-blue);
-  color: var(--accent-blue);
+  background: color-mix(in srgb, var(--accent-blue) 6%, var(--bg-secondary));
+  transform: translateY(-1px);
 }
 
 .ref-upload:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.ref-upload-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  color: var(--accent-blue);
+  flex-shrink: 0;
 }
 
 .ref-upload-text {

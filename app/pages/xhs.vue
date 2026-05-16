@@ -141,11 +141,8 @@ const togglePromptExpand = (id: string) => {
   } else {
     expandedPrompts.value.add(id)
   }
-  // 触发响应式更新
   expandedPrompts.value = new Set(expandedPrompts.value)
 }
-
-const isPromptExpanded = (id: string) => expandedPrompts.value.has(id)
 
 const getImageSrc = (image?: { data: string; mimeType: string }) => {
   if (!image) return ''
@@ -209,24 +206,6 @@ const handleDownloadAllZip = async () => {
   }
 }
 
-const historyThumb = (item: { storyboard: StoryboardItem[]; images: Array<{ data: string; mimeType: string }> }) => {
-  const fromBoard = item.storyboard.find((s) => s.image)?.image
-  if (fromBoard) return getImageSrc(fromBoard)
-  const fromImages = item.images?.[0]
-  return fromImages ? getImageSrc(fromImages) : ''
-}
-
-const formatTime = (ts: number) => {
-  const date = new Date(ts)
-  const now = new Date()
-  const sameDay = date.toDateString() === now.toDateString()
-  if (sameDay) {
-    return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
-  }
-  return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-}
-
-// 进入页面时同步 input 与 currentTopic（来自历史加载）
 onMounted(() => {
   if (currentTopic.value && !topicInput.value) {
     topicInput.value = currentTopic.value
@@ -236,87 +215,51 @@ onMounted(() => {
 
 <template>
   <div class="xhs-page">
-    <!-- 移动/平板顶栏：触发历史抽屉 -->
+    <!-- 移动/平板顶栏 -->
     <header v-if="!showHistoryColumn" class="xhs-mobile-bar">
       <button class="mobile-history-btn" type="button" @click="historyDrawerOpen = true">
         <UIcon name="i-heroicons-clock" class="w-4 h-4" />
         <span>历史 ({{ sortedHistory.length }})</span>
       </button>
-      <h1 class="mobile-title">小红书灵感实验室</h1>
+      <h1 class="mobile-title">
+        <span class="title-dot"></span>
+        灵感实验室
+      </h1>
+    </header>
+
+    <!-- 桌面端标题栏 -->
+    <header v-if="showHistoryColumn" class="xhs-desktop-bar">
+      <h1 class="desktop-title">
+        <span class="title-dot"></span>
+        灵感实验室
+      </h1>
+      <span class="desktop-subtitle">小红书内容创作工作台</span>
     </header>
 
     <div class="xhs-grid" :class="{ 'is-narrow': !showHistoryColumn }">
       <!-- 历史栏 -->
       <aside v-if="showHistoryColumn" class="col col-history">
-        <section class="panel history-panel">
-          <header class="panel-head">
-            <div>
-              <h3 class="panel-title">历史</h3>
-              <span class="panel-sub">{{ sortedHistory.length }} 条</span>
-            </div>
-            <button
-              v-if="sortedHistory.length > 0"
-              type="button"
-              class="clear-btn"
-              title="清空全部历史"
-              @click="requestClearAll"
-            >
-              <UIcon name="i-heroicons-trash" class="w-3 h-3" />
-              清空
-            </button>
-          </header>
-
-          <div v-if="sortedHistory.length === 0" class="history-empty">
-            <UIcon name="i-heroicons-clock" class="w-8 h-8 opacity-30" />
-            <p>暂无历史记录</p>
-            <p class="empty-tip">生成内容后点保存按钮可保存到这里。</p>
-          </div>
-
-          <ul v-else class="history-list">
-            <li
-              v-for="item in sortedHistory"
-              :key="item.id"
-              class="history-item"
-              :class="{ active: item.topic === currentTopic && item.content === currentContent }"
-              @click="handleLoadHistory(item.id)"
-            >
-              <div class="history-thumb">
-                <img v-if="historyThumb(item)" :src="historyThumb(item)" alt="预览" />
-                <div v-else class="history-thumb-empty">
-                  <UIcon name="i-heroicons-document-text" class="w-5 h-5 opacity-40" />
-                </div>
-              </div>
-              <div class="history-meta">
-                <div class="history-topic">{{ item.topic }}</div>
-                <div class="history-sub">
-                  <span>{{ item.storyboard.length }} 个分镜</span>
-                  <span class="dot">·</span>
-                  <span>{{ formatTime(item.createdAt) }}</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="history-delete-btn"
-                title="删除该条"
-                @click.stop="requestDeleteHistory(item.id)"
-              >
-                <UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-          </ul>
-        </section>
+        <XhsHistoryPanel
+          :items="sortedHistory"
+          :current-topic="currentTopic"
+          :current-content="currentContent"
+          @load="handleLoadHistory"
+          @delete="requestDeleteHistory"
+          @clear-all="requestClearAll"
+        />
       </aside>
 
       <!-- 中栏：主题 + 文案 -->
       <section class="col col-config">
         <!-- 主题输入卡 -->
-        <section class="panel">
+        <section class="panel topic-panel">
           <h3 class="panel-title">创作主题</h3>
           <div class="topic-row">
             <UInput
               v-model="topicInput"
               placeholder="输入你想创作的主题，按 Enter 生成..."
               class="topic-input"
+              size="lg"
               :disabled="isGenerating"
               @keydown.enter="handleGenerate"
             />
@@ -325,6 +268,7 @@ onMounted(() => {
               :disabled="!topicInput.trim()"
               icon="i-heroicons-sparkles"
               color="primary"
+              size="lg"
               @click="handleGenerate"
             >
               生成
@@ -372,7 +316,10 @@ onMounted(() => {
           </header>
 
           <article class="note">
-            <h2 v-if="currentTitle" class="note-title">{{ currentTitle }}</h2>
+            <div v-if="currentTitle" class="note-title-wrap">
+              <div class="note-accent-bar"></div>
+              <h2 class="note-title">{{ currentTitle }}</h2>
+            </div>
 
             <div v-if="currentBody" class="note-body">{{ currentBody }}</div>
 
@@ -399,126 +346,44 @@ onMounted(() => {
         </section>
 
         <section v-else class="panel content-panel content-empty">
-          <UIcon name="i-heroicons-document-text" class="w-10 h-10 opacity-30" />
-          <p>输入主题，让 AI 帮你创作小红书笔记</p>
-          <p class="empty-tip">将自动生成标题、正文、标签、4-6 张分镜规划</p>
+          <div class="empty-hero">
+            <div class="empty-icon-wrap">
+              <UIcon name="i-heroicons-light-bulb" class="w-10 h-10" />
+            </div>
+            <p class="empty-title">输入主题，开始创作</p>
+            <p class="empty-desc">AI 将自动生成标题、正文、标签和 4-6 张分镜规划</p>
+          </div>
+          <div class="empty-examples">
+            <span class="example-label">试试这些主题：</span>
+            <button
+              v-for="example in ['周末brunch食谱', '通勤穿搭分享', '居家健身计划']"
+              :key="example"
+              type="button"
+              class="example-chip"
+              @click="topicInput = example"
+            >
+              {{ example }}
+            </button>
+          </div>
         </section>
       </section>
 
       <!-- 右栏：分镜 -->
       <section class="col col-storyboard">
-        <section class="panel storyboard-panel">
-          <header class="panel-head">
-            <div>
-              <h3 class="panel-title">分镜规划</h3>
-              <span class="panel-sub">
-                {{ currentStoryboard.length }} 个 · 已完成 {{ completedImages }}
-              </span>
-            </div>
-            <div class="storyboard-actions">
-              <UButton
-                v-if="hasStoryboard"
-                :disabled="isGenerating || completedImages === currentStoryboard.length"
-                size="xs"
-                color="primary"
-                icon="i-heroicons-photo"
-                @click="generateAllStoryboardImages"
-              >
-                批量生成
-              </UButton>
-              <UButton
-                v-if="completedImages > 0"
-                :loading="isZipping"
-                size="xs"
-                color="success"
-                variant="outline"
-                icon="i-heroicons-arrow-down-tray"
-                @click="handleDownloadAllZip"
-              >
-                ZIP
-              </UButton>
-            </div>
-          </header>
-
-          <div v-if="!hasStoryboard" class="storyboard-empty">
-            <UIcon name="i-heroicons-squares-2x2" class="w-10 h-10 opacity-30" />
-            <p>生成内容后将显示分镜规划</p>
-          </div>
-
-          <ul v-else class="storyboard-list">
-            <li
-              v-for="(item, idx) in currentStoryboard"
-              :key="item.id"
-              class="storyboard-card"
-            >
-              <div class="storyboard-image" :class="{ 'has-image': !!item.image }">
-                <template v-if="item.image">
-                  <img
-                    :src="getImageSrc(item.image)"
-                    class="storyboard-img"
-                    alt="Storyboard"
-                    @click="handlePreview(item)"
-                  />
-                  <div class="storyboard-overlay">
-                    <button
-                      type="button"
-                      class="overlay-btn"
-                      title="重新生成"
-                      :disabled="isGenerating"
-                      @click.stop="handleGenerateOne(item)"
-                    >
-                      <UIcon name="i-heroicons-arrow-path" class="w-4 h-4" />
-                    </button>
-                    <button
-                      type="button"
-                      class="overlay-btn"
-                      title="下载"
-                      @click.stop="handleDownloadOne(item, idx)"
-                    >
-                      <UIcon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
-                    </button>
-                  </div>
-                </template>
-                <div v-else class="storyboard-placeholder">
-                  <UButton
-                    icon="i-heroicons-sparkles"
-                    size="xs"
-                    color="primary"
-                    variant="outline"
-                    :loading="isGenerating"
-                    @click="handleGenerateOne(item)"
-                  >
-                    生成
-                  </UButton>
-                </div>
-              </div>
-
-              <div class="storyboard-meta">
-                <div class="storyboard-index">第 {{ idx + 1 }} 张</div>
-                <p class="storyboard-desc">{{ item.description }}</p>
-                <button
-                  v-if="item.imagePrompt"
-                  type="button"
-                  class="prompt-toggle"
-                  @click="togglePromptExpand(item.id)"
-                >
-                  <UIcon
-                    :name="
-                      isPromptExpanded(item.id)
-                        ? 'i-heroicons-chevron-up'
-                        : 'i-heroicons-chevron-down'
-                    "
-                    class="w-3 h-3"
-                  />
-                  {{ isPromptExpanded(item.id) ? '收起' : '查看' }}提示词
-                </button>
-                <p v-if="isPromptExpanded(item.id)" class="storyboard-prompt">
-                  {{ item.imagePrompt }}
-                </p>
-              </div>
-            </li>
-          </ul>
-        </section>
+        <XhsStoryboardPanel
+          :items="currentStoryboard"
+          :completed-count="completedImages"
+          :is-generating="isGenerating"
+          :is-zipping="isZipping"
+          :has-storyboard="hasStoryboard"
+          :expanded-prompts="expandedPrompts"
+          @generate-all="generateAllStoryboardImages"
+          @download-zip="handleDownloadAllZip"
+          @generate-one="handleGenerateOne"
+          @preview="handlePreview"
+          @download-one="handleDownloadOne"
+          @toggle-prompt="togglePromptExpand"
+        />
       </section>
     </div>
 
@@ -531,57 +396,16 @@ onMounted(() => {
       :ui="{ content: 'max-w-xs w-[18rem]' }"
     >
       <template #body>
-        <section class="panel history-panel inside-drawer">
-          <header class="panel-head">
-            <span class="panel-sub">{{ sortedHistory.length }} 条</span>
-            <button
-              v-if="sortedHistory.length > 0"
-              type="button"
-              class="clear-btn"
-              @click="requestClearAll"
-            >
-              <UIcon name="i-heroicons-trash" class="w-3 h-3" />
-              清空
-            </button>
-          </header>
-
-          <div v-if="sortedHistory.length === 0" class="history-empty">
-            <UIcon name="i-heroicons-clock" class="w-8 h-8 opacity-30" />
-            <p>暂无历史记录</p>
-          </div>
-
-          <ul v-else class="history-list">
-            <li
-              v-for="item in sortedHistory"
-              :key="item.id"
-              class="history-item"
-              :class="{ active: item.topic === currentTopic && item.content === currentContent }"
-              @click="handleLoadHistory(item.id)"
-            >
-              <div class="history-thumb">
-                <img v-if="historyThumb(item)" :src="historyThumb(item)" alt="预览" />
-                <div v-else class="history-thumb-empty">
-                  <UIcon name="i-heroicons-document-text" class="w-5 h-5 opacity-40" />
-                </div>
-              </div>
-              <div class="history-meta">
-                <div class="history-topic">{{ item.topic }}</div>
-                <div class="history-sub">
-                  <span>{{ item.storyboard.length }} 个分镜</span>
-                  <span class="dot">·</span>
-                  <span>{{ formatTime(item.createdAt) }}</span>
-                </div>
-              </div>
-              <button
-                type="button"
-                class="history-delete-btn"
-                @click.stop="requestDeleteHistory(item.id)"
-              >
-                <UIcon name="i-heroicons-trash" class="w-3.5 h-3.5" />
-              </button>
-            </li>
-          </ul>
-        </section>
+        <div class="drawer-history-wrap">
+          <XhsHistoryPanel
+            :items="sortedHistory"
+            :current-topic="currentTopic"
+            :current-content="currentContent"
+            @load="handleLoadHistory"
+            @delete="requestDeleteHistory"
+            @clear-all="requestClearAll"
+          />
+        </div>
       </template>
     </USlideover>
 
@@ -623,6 +447,7 @@ onMounted(() => {
   overflow: hidden;
 }
 
+/* 标题栏 */
 .xhs-mobile-bar {
   display: flex;
   align-items: center;
@@ -630,11 +455,40 @@ onMounted(() => {
   flex: 0 0 auto;
 }
 
+.xhs-desktop-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.title-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--xhs-color);
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
 .mobile-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--text-main);
   margin: 0;
+}
+
+.desktop-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.desktop-subtitle {
+  font-size: 12px;
+  color: var(--text-sub);
 }
 
 .mobile-history-btn {
@@ -652,9 +506,10 @@ onMounted(() => {
 }
 
 .mobile-history-btn:hover {
-  border-color: var(--accent-blue);
+  border-color: var(--xhs-color);
 }
 
+/* 三栏 Grid */
 .xhs-grid {
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr) minmax(360px, 480px);
@@ -719,176 +574,11 @@ onMounted(() => {
   color: var(--text-sub);
 }
 
-.clear-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: none;
-  border: none;
-  color: #d93025;
-  cursor: pointer;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  transition: background 0.2s;
-}
-
-.clear-btn:hover {
-  background: color-mix(in srgb, #fca5a5 35%, transparent);
-}
-
-/* 历史栏 */
-.history-panel {
-  height: 100%;
-}
-
-.history-panel.inside-drawer {
-  border: none;
-  background: transparent;
-  border-radius: 0;
-  height: 100%;
-  padding: 12px;
-}
-
-.history-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--text-sub);
-  gap: 6px;
-  padding: 32px 8px;
-}
-
-.history-empty p {
-  margin: 0;
-  font-size: 13px;
-}
-
-.empty-tip {
-  font-size: 11px !important;
-  color: var(--text-tertiary, var(--text-sub));
-}
-
-.history-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 4px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-.history-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-secondary);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.history-item:hover {
-  border-color: var(--accent-blue);
-}
-
-.history-item:hover .history-delete-btn {
-  opacity: 1;
-}
-
-.history-item.active {
-  border-color: var(--accent-blue);
-  background: color-mix(in srgb, var(--accent-blue) 8%, var(--bg-secondary));
-}
-
-.history-thumb {
-  flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--bg-tertiary);
-}
-
-.history-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.history-thumb-empty {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.history-meta {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.history-topic {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-main);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.history-sub {
-  font-size: 11px;
-  color: var(--text-sub);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.dot {
-  opacity: 0.5;
-}
-
-.history-delete-btn {
-  flex-shrink: 0;
-  width: 26px;
-  height: 26px;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  color: var(--text-sub);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  opacity: 0;
-  transition: all 0.15s ease;
-}
-
-.history-delete-btn:hover {
-  background: color-mix(in srgb, #fca5a5 28%, transparent);
-  color: #d93025;
-}
-
-@media (max-width: 768px) {
-  .history-delete-btn {
-    opacity: 1;
-  }
-}
-
 /* 主题输入 */
+.topic-panel {
+  border-color: color-mix(in srgb, var(--xhs-color) 20%, var(--border-color));
+}
+
 .topic-row {
   display: flex;
   gap: 8px;
@@ -900,36 +590,106 @@ onMounted(() => {
 }
 
 /* 内容卡 */
-.content-panel {
-  /* 让内容随长度伸展，不限定 max-height */
-}
-
 .content-actions {
   display: flex;
   gap: 0;
 }
 
 .content-empty {
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  text-align: center;
-  color: var(--text-sub);
-  min-height: 220px;
+  min-height: 280px;
 }
 
-.content-empty p {
+.empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 24px 0 16px;
+}
+
+.empty-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--xhs-color) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--xhs-color);
+}
+
+.empty-title {
   margin: 0;
-  font-size: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.empty-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.empty-examples {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.example-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.example-chip {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-sub);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.example-chip:hover {
+  border-color: var(--xhs-color);
+  color: var(--xhs-color);
+  background: color-mix(in srgb, var(--xhs-color) 6%, transparent);
 }
 
 .content-progress {
   margin-top: 4px;
 }
 
+/* 笔记内容 */
 .note {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.note-title-wrap {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.note-accent-bar {
+  flex-shrink: 0;
+  width: 3px;
+  height: 24px;
+  border-radius: 2px;
+  background: var(--xhs-color);
+  margin-top: 2px;
 }
 
 .note-title {
@@ -958,189 +718,29 @@ onMounted(() => {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent-blue) 30%, transparent);
-  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
-  color: var(--accent-blue);
+  border: 1px solid color-mix(in srgb, var(--xhs-color) 25%, transparent);
+  background: color-mix(in srgb, var(--xhs-color) 8%, transparent);
+  color: var(--xhs-color);
   font-size: 12px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .tag-pill:hover {
-  background: color-mix(in srgb, var(--accent-blue) 18%, transparent);
+  background: color-mix(in srgb, var(--xhs-color) 16%, transparent);
 }
 
-/* 分镜栏 */
-.storyboard-panel {
+/* 抽屉内历史面板 */
+.drawer-history-wrap {
   height: 100%;
-  flex: 1 1 auto;
+  padding: 0;
 }
 
-.storyboard-actions {
-  display: flex;
-  gap: 6px;
-}
-
-.storyboard-empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  color: var(--text-sub);
-  gap: 8px;
-  padding: 32px 16px;
-}
-
-.storyboard-empty p {
-  margin: 0;
-  font-size: 13px;
-}
-
-.storyboard-list {
-  list-style: none;
-  margin: 0;
-  padding: 0 4px 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  flex: 1;
-  min-height: 0;
-}
-
-.storyboard-card {
-  display: grid;
-  grid-template-columns: 96px 1fr;
-  gap: 10px;
-  padding: 8px;
-  border: 1px solid var(--border-color);
-  border-radius: 10px;
-  background: var(--bg-secondary);
-  transition: border-color 0.15s ease;
-}
-
-.storyboard-card:hover {
-  border-color: var(--accent-blue);
-}
-
-.storyboard-image {
-  position: relative;
-  width: 96px;
-  height: 96px;
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--bg-tertiary);
-  flex-shrink: 0;
-}
-
-.storyboard-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  cursor: zoom-in;
-  display: block;
-}
-
-.storyboard-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
-}
-
-.storyboard-image.has-image:hover .storyboard-overlay {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.overlay-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+.drawer-history-wrap :deep(.history-panel) {
   border: none;
-  background: rgba(255, 255, 255, 0.9);
-  color: var(--text-main);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s ease;
-}
-
-.overlay-btn:hover {
-  background: #fff;
-}
-
-.overlay-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.storyboard-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.storyboard-meta {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.storyboard-index {
-  font-size: 11px;
-  color: var(--text-sub);
-  font-weight: 500;
-}
-
-.storyboard-desc {
-  font-size: 13px;
-  color: var(--text-main);
-  margin: 0;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.prompt-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  align-self: flex-start;
-  background: none;
-  border: none;
-  padding: 2px 0;
-  color: var(--text-sub);
-  font-size: 11px;
-  cursor: pointer;
-  transition: color 0.15s ease;
-}
-
-.prompt-toggle:hover {
-  color: var(--accent-blue);
-}
-
-.storyboard-prompt {
-  font-size: 11px;
-  color: var(--text-sub);
-  margin: 0;
-  padding: 6px 8px;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  line-height: 1.5;
-  word-break: break-word;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: transparent;
+  border-radius: 0;
+  padding: 12px;
 }
 
 @media (max-width: 767px) {

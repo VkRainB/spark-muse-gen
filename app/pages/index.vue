@@ -8,11 +8,8 @@ const {
   streamingSessionId,
   getStreamingText,
 } = useImageGeneration();
-const { isMobile } = useDevice();
 
 const messageListRef = ref<{ scrollToBottom: () => void }>();
-
-const promptDrawerOpen = inject<Ref<boolean>>("promptDrawerOpen")!;
 
 // 当前会话的流式文本：仅在当前会话与正在产出的会话一致时返回非空
 const currentStreamingText = computed(() => {
@@ -40,16 +37,6 @@ watch(
     });
   },
 );
-
-const handlePromptApply = (prompt: string) => {
-  chatInputStore.apply(prompt);
-  promptDrawerOpen.value = false;
-};
-
-const handlePromptSend = (prompt: string) => {
-  chatInputStore.submit(prompt);
-  promptDrawerOpen.value = false;
-};
 
 const handleResend = (message: any) => {
   // 锁定当前会话，移除该会话最后一条助手回复
@@ -108,30 +95,6 @@ const handleClearMessages = () => {
       <!-- 输入区域 -->
       <ChatInputBar />
     </div>
-
-    <!-- 快捷提示词抽屉 -->
-    <USlideover
-      v-model:open="promptDrawerOpen"
-      side="right"
-      title="快捷提示词"
-      :ui="{ content: 'max-w-xs', footer: 'justify-end' }"
-    >
-      <template #body>
-        <ChatQuickPromptPanel
-          @apply="handlePromptApply"
-          @send="handlePromptSend"
-        />
-      </template>
-      <template #footer="{ close }">
-        <UButton
-          label="关闭"
-          color="neutral"
-          variant="outline"
-          icon="i-heroicons-x-mark"
-          @click="close"
-        />
-      </template>
-    </USlideover>
   </div>
 </template>
 

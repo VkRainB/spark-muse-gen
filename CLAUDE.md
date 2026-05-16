@@ -48,7 +48,7 @@ app/
 │   ├── icons/brand/          # @nuxt/icon customCollections（prefix: brand）
 │   └── illustrations/        # nuxt-svgo-loader（prefix: illus，预留）
 ├── components/
-│   ├── chat/                  # 聊天界面（InputBar, MessageItem, MessageList, QuickPromptPanel）
+│   ├── chat/                  # 聊天界面（InputBar, MessageItem, MessageList）
 │   ├── settings/              # 设置（ProviderManager, SettingsPanel, ThemeSwitch）
 │   ├── sticker/               # 贴纸工作台（StickerCharacterPanel, StickerHistoryPanel, StickerImageCard, StickerResultGrid, StickerVariantPicker）
 │   ├── tools/                 # 工具弹层（BananaTool, CustomPromptTool）

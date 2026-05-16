@@ -65,16 +65,18 @@ const handlePreview = (index: number) => {
     <header class="result-head">
       <div>
         <h3 class="panel-title">结果</h3>
-        <span class="panel-sub">
-          {{ currentBatch ? characterLabel : '当前无批次' }} · {{ loadedImages.length }} 张
+        <span v-if="currentBatch" class="result-batch-tag">
+          {{ characterLabel }}
+          <span class="result-batch-count">{{ loadedImages.length }} 张</span>
         </span>
+        <span v-else class="panel-sub">当前无批次</span>
       </div>
       <UButton
         v-if="loadedImages.length > 0"
-        color="success"
         size="sm"
         icon="i-heroicons-arrow-down-tray"
         :loading="isZipping"
+        class="zip-btn"
         @click="handleDownloadAll"
       >
         ZIP 下载
@@ -82,13 +84,19 @@ const handlePreview = (index: number) => {
     </header>
 
     <div v-if="!currentBatch" class="result-empty">
-      <UIcon name="i-heroicons-sparkles" class="w-10 h-10 opacity-30" />
-      <p>选择左侧历史批次查看，或在中栏配置后点击批量生成</p>
+      <div class="result-empty-icon">
+        <UIcon name="i-heroicons-sparkles" class="w-8 h-8" />
+      </div>
+      <p class="result-empty-title">暂无结果</p>
+      <p class="result-empty-desc">配置角色并点击批量生成，结果将展示在这里</p>
     </div>
 
     <div v-else-if="loadedImages.length === 0" class="result-empty">
-      <UIcon name="i-heroicons-photo" class="w-10 h-10 opacity-30" />
-      <p>该批次暂未生成图片</p>
+      <div class="result-empty-icon">
+        <UIcon name="i-heroicons-photo" class="w-8 h-8" />
+      </div>
+      <p class="result-empty-title">等待生成</p>
+      <p class="result-empty-desc">该批次暂未生成图片</p>
     </div>
 
     <div v-else class="result-grid">
@@ -109,9 +117,9 @@ const handlePreview = (index: number) => {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--card-bg);
   height: 100%;
   min-height: 0;
@@ -119,7 +127,7 @@ const handlePreview = (index: number) => {
 
 .result-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
 }
@@ -131,11 +139,42 @@ const handlePreview = (index: number) => {
   color: var(--text-main);
 }
 
+.result-batch-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-sub);
+}
+
+.result-batch-count {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent-blue) 10%, transparent);
+  color: var(--accent-blue);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .panel-sub {
   font-size: 12px;
   color: var(--text-sub);
 }
 
+.zip-btn {
+  background: linear-gradient(135deg, var(--primary-color), var(--primary-hover));
+  border: none;
+  color: #fff;
+}
+
+.zip-btn:hover {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary-color) 30%, transparent);
+}
+
+/* 空状态 */
 .result-empty {
   flex: 1;
   display: flex;
@@ -148,12 +187,34 @@ const handlePreview = (index: number) => {
   padding: 32px 16px;
 }
 
-.result-empty p {
-  margin: 0;
-  font-size: 13px;
-  max-width: 280px;
+.result-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--accent-blue) 8%, transparent);
+  color: var(--accent-blue);
+  opacity: 0.6;
+  margin-bottom: 4px;
 }
 
+.result-empty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.result-empty-desc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-tertiary, var(--text-sub));
+  max-width: 240px;
+}
+
+/* 网格 */
 .result-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

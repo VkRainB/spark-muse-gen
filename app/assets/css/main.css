@@ -105,30 +105,28 @@ html, body {
 }
 
 /* ============================================
-   导航卡片样式
+   导航列表项样式
    ============================================ */
 .nav-card {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  margin: 4px 12px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  margin: 1px 10px;
+  border-radius: 8px;
   cursor: pointer;
-  border: 1px solid var(--border-color);
-  background: var(--card-bg);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid transparent;
+  background: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .nav-card:hover {
-  transform: translateY(-1px);
-  border-color: var(--primary-color);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  background: var(--bg-tertiary);
 }
 
 .nav-card-icon {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -143,9 +141,9 @@ html, body {
 
 .nav-card-title {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-main);
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .nav-card-desc {
@@ -153,60 +151,19 @@ html, body {
   color: var(--text-tertiary);
 }
 
-/* XHS 卡片特殊样式 */
-.xhs-nav-card .xhs-icon {
-  background: linear-gradient(135deg, #ffe0e5 0%, #fff5f6 100%);
-  color: var(--xhs-color);
-}
+/* 各图标颜色 - 仅图标着色，无背景渐变 */
+.xhs-icon { color: var(--xhs-color); }
+.banana-icon { color: var(--banana-color); }
+.custom-icon { color: #9333ea; }
+.feature-icon { color: #ef4444; }
+.tool-icon { color: var(--primary-color); }
 
-.xhs-nav-card:hover {
-  border-color: var(--xhs-color);
-  background: linear-gradient(135deg, #fff8f9 0%, #ffffff 100%);
-}
-
-/* Banana 卡片特殊样式 */
-.banana-nav-card .banana-icon {
-  background: linear-gradient(135deg, #fef3c7 0%, #fffbeb 100%);
-  color: var(--banana-color);
-}
-
-.banana-nav-card:hover {
-  border-color: var(--banana-color);
-  background: linear-gradient(135deg, #fffbeb 0%, #ffffff 100%);
-}
-
-/* 自定义提示词卡片 */
-.custom-nav-card .custom-icon {
-  background: linear-gradient(135deg, #f3e8ff 0%, #faf5ff 100%);
-  color: #9333ea;
-}
-
-.custom-nav-card:hover {
-  border-color: #9333ea;
-  background: linear-gradient(135deg, #faf5ff 0%, #ffffff 100%);
-}
-
-/* 功能卡片 */
-.feature-nav-card .feature-icon {
-  background: linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%);
-  color: #ef4444;
-}
-
-.feature-nav-card:hover {
-  border-color: #ef4444;
-  background: linear-gradient(135deg, #fff5f5 0%, #ffffff 100%);
-}
-
-/* 工具卡片 */
-.tool-nav-card .tool-icon {
-  background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
-  color: var(--primary-color);
-}
-
-.tool-nav-card:hover {
-  border-color: var(--primary-color);
-  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
-}
+/* 暗色模式图标微调 */
+.dark .xhs-icon { color: #fb7185; }
+.dark .banana-icon { color: #fbbf24; }
+.dark .custom-icon { color: #c084fc; }
+.dark .feature-icon { color: #f87171; }
+.dark .tool-icon { color: #34d399; }
 
 /* ============================================
    新建对话按钮

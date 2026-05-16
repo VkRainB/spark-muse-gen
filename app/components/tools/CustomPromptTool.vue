@@ -188,6 +188,7 @@ const formatTime = (timestamp: number) => {
           :class="{ active: currentTab === 'list' }"
           @click="currentTab = 'list'"
         >
+          <UIcon name="i-heroicons-list-bullet" class="w-4 h-4" />
           列表
           <span class="tab-count">{{ promptsStore.allPrompts.length }}</span>
         </button>
@@ -197,6 +198,7 @@ const formatTime = (timestamp: number) => {
           :class="{ active: currentTab === 'edit' }"
           @click="currentTab = 'edit'"
         >
+          <UIcon :name="editingId ? 'i-heroicons-pencil-square' : 'i-heroicons-plus'" class="w-4 h-4" />
           {{ editTabLabel }}
         </button>
       </div>
@@ -236,28 +238,40 @@ const formatTime = (timestamp: number) => {
           value-key="value"
           class="list-filter"
         />
-        <UButton
-          color="neutral"
-          variant="ghost"
-          size="sm"
-          title="重置筛选"
-          @click="resetFilters"
-        >
-          重置
-        </UButton>
+        <UTooltip text="重置筛选">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            icon="i-heroicons-x-mark"
+            size="sm"
+            @click="resetFilters"
+          />
+        </UTooltip>
       </div>
 
       <div v-if="filteredPrompts.length === 0" class="empty-block">
-        <UIcon name="i-heroicons-document-text" class="w-10 h-10 opacity-30" />
-        <p>暂无匹配的提示词</p>
+        <div class="empty-icon-wrapper">
+          <UIcon name="i-heroicons-document-text" class="w-10 h-10" />
+        </div>
+        <h3 class="empty-title">{{ promptsStore.allPrompts.length === 0 ? '暂无提示词' : '暂无匹配结果' }}</h3>
+        <p class="empty-desc">{{ promptsStore.allPrompts.length === 0 ? '创建你的第一条提示词，开始高效创作' : '尝试调整搜索关键词或筛选条件' }}</p>
         <UButton
           v-if="promptsStore.allPrompts.length === 0"
           size="sm"
-          variant="outline"
           icon="i-heroicons-plus"
           @click="startCreate"
         >
-          创建第一条提示词
+          创建提示词
+        </UButton>
+        <UButton
+          v-else
+          size="sm"
+          color="neutral"
+          variant="outline"
+          icon="i-heroicons-x-mark"
+          @click="resetFilters"
+        >
+          重置筛选
         </UButton>
       </div>
 
@@ -265,7 +279,7 @@ const formatTime = (timestamp: number) => {
         <li v-for="item in filteredPrompts" :key="item.id" class="prompt-card">
           <div class="prompt-header">
             <span class="prompt-title" :title="item.title">{{ item.title }}</span>
-            <span class="prompt-category">{{ item.category }}</span>
+            <UBadge :label="item.category" color="primary" variant="subtle" size="sm" />
           </div>
 
           <p class="prompt-content">{{ item.prompt }}</p>
@@ -273,46 +287,59 @@ const formatTime = (timestamp: number) => {
           <div class="prompt-footer">
             <span class="prompt-time">{{ formatTime(item.createdAt) }}</span>
             <div class="prompt-actions">
-              <UButton
-                icon="i-heroicons-clipboard-document"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                title="复制"
-                @click="copyPrompt(item.prompt)"
-              />
-              <UButton
-                icon="i-heroicons-pencil-square"
-                size="xs"
-                color="primary"
-                variant="ghost"
-                title="填充到输入框"
-                @click="applyPrompt(item.prompt)"
-              />
-              <UButton
-                icon="i-heroicons-paper-airplane"
-                size="xs"
-                color="info"
-                variant="ghost"
-                title="直接发送"
-                @click="sendPrompt(item.prompt)"
-              />
-              <UButton
-                icon="i-heroicons-pencil"
-                size="xs"
-                color="neutral"
-                variant="ghost"
-                title="编辑"
-                @click="startEdit(item.id)"
-              />
-              <UButton
-                icon="i-heroicons-trash"
-                size="xs"
-                color="error"
-                variant="ghost"
-                title="删除"
-                @click="requestDelete(item.id)"
-              />
+              <!-- 主要操作 -->
+              <UTooltip text="填充到输入框">
+                <UButton
+                  icon="i-heroicons-arrow-right-circle"
+                  size="xs"
+                  color="primary"
+                  variant="soft"
+                  @click="applyPrompt(item.prompt)"
+                />
+              </UTooltip>
+              <UTooltip text="直接发送">
+                <UButton
+                  icon="i-heroicons-paper-airplane"
+                  size="xs"
+                  color="info"
+                  variant="soft"
+                  @click="sendPrompt(item.prompt)"
+                />
+              </UTooltip>
+
+              <!-- 分隔线 -->
+              <div class="action-divider" />
+
+              <!-- 次要操作 -->
+              <UTooltip text="复制">
+                <UButton
+                  icon="i-heroicons-clipboard-document"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  @click="copyPrompt(item.prompt)"
+                />
+              </UTooltip>
+              <UTooltip text="编辑">
+                <UButton
+                  icon="i-heroicons-pencil"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  @click="startEdit(item.id)"
+                />
+              </UTooltip>
+
+              <!-- 危险操作 -->
+              <UTooltip text="删除">
+                <UButton
+                  icon="i-heroicons-trash"
+                  size="xs"
+                  color="error"
+                  variant="ghost"
+                  @click="requestDelete(item.id)"
+                />
+              </UTooltip>
             </div>
           </div>
         </li>
@@ -321,33 +348,40 @@ const formatTime = (timestamp: number) => {
 
     <!-- 编辑 Tab -->
     <section v-show="currentTab === 'edit'" class="tab-panel edit-panel">
-      <UFormField label="标题" required>
-        <UInput v-model="form.title" placeholder="例如：秋日电影感咖啡馆" />
-      </UFormField>
+      <div class="form-section">
+        <UFormField label="标题" required>
+          <UInput v-model="form.title" placeholder="例如：秋日电影感咖啡馆" />
+        </UFormField>
+      </div>
 
-      <UFormField label="分类">
-        <UInput v-model="form.category" placeholder="例如：摄影、插画、电商" />
-        <div v-if="promptsStore.categories.length > 0" class="category-pills">
-          <button
-            v-for="category in promptsStore.categories"
-            :key="category"
-            type="button"
-            class="category-pill"
-            @click="fillCategory(category)"
-          >
-            {{ category }}
-          </button>
-        </div>
-      </UFormField>
+      <div class="form-section">
+        <UFormField label="分类">
+          <UInput v-model="form.category" placeholder="例如：摄影、插画、电商" />
+          <div v-if="promptsStore.categories.length > 0" class="category-pills">
+            <UBadge
+              v-for="category in promptsStore.categories"
+              :key="category"
+              :label="category"
+              color="neutral"
+              variant="outline"
+              size="sm"
+              class="category-pill"
+              @click="fillCategory(category)"
+            />
+          </div>
+        </UFormField>
+      </div>
 
-      <UFormField label="提示词内容" required>
-        <UTextarea
-          v-model="form.prompt"
-          :rows="8"
-          autoresize
-          placeholder="在这里输入完整提示词..."
-        />
-      </UFormField>
+      <div class="form-section">
+        <UFormField label="提示词内容" required>
+          <UTextarea
+            v-model="form.prompt"
+            :rows="8"
+            autoresize
+            placeholder="在这里输入完整提示词..."
+          />
+        </UFormField>
+      </div>
 
       <div class="form-actions">
         <UButton icon="i-heroicons-check" @click="savePrompt">
@@ -390,8 +424,8 @@ const formatTime = (timestamp: number) => {
 .tab-list {
   display: inline-flex;
   background: var(--bg-tertiary);
-  border-radius: 8px;
-  padding: 3px;
+  border-radius: 10px;
+  padding: 4px;
   gap: 2px;
 }
 
@@ -399,39 +433,40 @@ const formatTime = (timestamp: number) => {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 8px 16px;
   font-size: 13px;
   font-weight: 500;
   color: var(--text-sub);
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .tab-btn:hover {
   color: var(--text-main);
+  background: color-mix(in srgb, var(--card-bg) 50%, transparent);
 }
 
 .tab-btn.active {
   background: var(--card-bg);
   color: var(--text-main);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--shadow-sm);
 }
 
 .tab-count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  font-size: 10px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-sub);
-  background: var(--bg-secondary);
-  border-radius: 9px;
+  background: var(--bg-tertiary);
+  border-radius: 10px;
 }
 
 .tab-btn.active .tab-count {
@@ -442,6 +477,7 @@ const formatTime = (timestamp: number) => {
 .tab-panel {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -452,6 +488,10 @@ const formatTime = (timestamp: number) => {
   display: flex;
   gap: 8px;
   align-items: center;
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   flex: 0 0 auto;
 }
 
@@ -466,7 +506,7 @@ const formatTime = (timestamp: number) => {
   padding: 0 4px 0 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
@@ -474,14 +514,16 @@ const formatTime = (timestamp: number) => {
 
 .prompt-card {
   border: 1px solid var(--border-color);
-  border-radius: 10px;
-  padding: 10px 12px;
-  background: var(--bg-secondary);
-  transition: border-color 0.15s ease;
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: var(--card-bg);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .prompt-card:hover {
-  border-color: var(--accent-blue);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .prompt-header {
@@ -489,11 +531,11 @@ const formatTime = (timestamp: number) => {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .prompt-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text-main);
   white-space: nowrap;
@@ -503,22 +545,11 @@ const formatTime = (timestamp: number) => {
   min-width: 0;
 }
 
-.prompt-category {
-  border-radius: 999px;
-  font-size: 10px;
-  line-height: 1;
-  color: var(--primary-color);
-  border: 1px solid rgba(26, 115, 232, 0.3);
-  background: rgba(26, 115, 232, 0.08);
-  padding: 3px 7px;
-  flex-shrink: 0;
-}
-
 .prompt-content {
-  margin: 0 0 6px;
+  margin: 0 0 10px;
   color: var(--text-sub);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -534,12 +565,20 @@ const formatTime = (timestamp: number) => {
 
 .prompt-time {
   font-size: 11px;
-  color: var(--text-sub);
+  color: var(--text-tertiary);
 }
 
 .prompt-actions {
   display: flex;
-  gap: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.action-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-color);
+  margin: 0 4px;
 }
 
 .empty-block {
@@ -549,46 +588,88 @@ const formatTime = (timestamp: number) => {
   justify-content: center;
   flex-direction: column;
   color: var(--text-sub);
-  gap: 10px;
-  padding: 32px 0;
+  gap: 12px;
+  padding: 48px 0;
 }
 
-.empty-block p {
+.empty-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+}
+
+.empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-main);
   margin: 0;
+}
+
+.empty-desc {
   font-size: 13px;
+  color: var(--text-sub);
+  margin: 0;
+  text-align: center;
+  max-width: 240px;
 }
 
 /* 编辑 Tab */
 .edit-panel {
   overflow-y: auto;
   padding-right: 4px;
+  width: 100%;
+}
+
+.form-section {
+  padding: 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-section > :deep(*) {
+  width: 100%;
+  max-width: none;
+}
+
+.form-section :deep(input),
+.form-section :deep(textarea) {
+  width: 100%;
+  max-width: none;
+}
+
+.form-section :deep(.relative) {
+  width: 100%;
+  max-width: none;
 }
 
 .category-pills {
-  margin-top: 8px;
+  margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
 .category-pill {
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-sub);
-  border-radius: 999px;
-  padding: 4px 8px;
-  font-size: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .category-pill:hover {
+  background: color-mix(in srgb, var(--primary-color) 10%, transparent);
   border-color: var(--primary-color);
   color: var(--primary-color);
 }
 
 .form-actions {
-  margin-top: 8px;
+  margin-top: 12px;
   display: flex;
   gap: 8px;
   flex: 0 0 auto;

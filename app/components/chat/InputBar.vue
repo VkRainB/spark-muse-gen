@@ -337,7 +337,7 @@ watch(
         ref="textareaRef"
         v-model="prompt"
         class="chat-input"
-        placeholder="描述画面..."
+        placeholder="描述你想要的画面，或粘贴提示词..."
         rows="1"
         :disabled="currentSessionGenerating"
         @input="adjustTextareaHeight"
@@ -607,9 +607,11 @@ watch(
 }
 
 .input-wrapper:focus-within {
-  border-color: color-mix(in srgb, var(--primary-color) 35%, var(--border-color));
+  border-color: var(--primary-color);
   background: var(--card-bg);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.1);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--primary-color) 10%, transparent),
+    0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
 .left-actions {

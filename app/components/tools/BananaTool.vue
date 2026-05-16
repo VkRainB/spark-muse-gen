@@ -109,11 +109,7 @@ onMounted(() => {
     </div>
 
     <!-- 列表区 -->
-    <div v-if="isLoading" class="banana-loading">
-      <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-gray-400" />
-    </div>
-
-    <div v-else class="banana-list">
+    <div class="banana-list">
       <article
         v-for="item in filteredPrompts"
         :key="item.id"
@@ -174,8 +170,12 @@ onMounted(() => {
         </div>
       </article>
 
-      <p v-if="filteredPrompts.length === 0" class="banana-empty">
+      <p v-if="filteredPrompts.length === 0 && !isLoading" class="banana-empty">
         没有找到匹配的提示词
+      </p>
+      <p v-if="filteredPrompts.length === 0 && isLoading" class="banana-empty">
+        <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-gray-400" />
+        <span class="loading-text">正在加载提示词库...</span>
       </p>
     </div>
   </div>
@@ -208,17 +208,9 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.banana-loading {
-  display: flex;
-  justify-content: center;
-  padding: 32px 0;
-  flex: 1;
-  align-items: center;
-}
-
 .banana-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
   gap: 12px;
   flex: 1 1 auto;
   min-height: 0;
@@ -354,6 +346,10 @@ onMounted(() => {
 }
 
 .banana-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   text-align: center;
   color: var(--text-sub);
   padding: 32px 0;
@@ -361,27 +357,69 @@ onMounted(() => {
   grid-column: 1 / -1;
 }
 
+.banana-empty .loading-text {
+  font-size: 13px;
+}
+
 @media (max-width: 768px) {
   .banana-list {
     grid-template-columns: 1fr;
+    gap: 8px;
   }
 
+  /* 移动端卡片：水平布局，左侧小图 + 右侧文字 */
   .prompt-card.has-preview {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 72px;
+    gap: 10px;
+    padding: 10px 12px;
+    min-height: auto;
   }
 
+  /* 移动端预览图：固定小尺寸正方形 */
   .prompt-card-preview {
-    aspect-ratio: 16 / 9;
-    max-height: 160px;
+    aspect-ratio: 1 / 1;
+    width: 72px;
+    height: 72px;
+    border-radius: 8px;
+    align-self: center;
   }
 
-  /* 移动端没有真正的 dblclick，hover 提示也无意义，常态显示放大镜 */
+  .prompt-card-preview img {
+    object-fit: cover;
+  }
+
+  /* 移动端常态显示放大镜 */
   .preview-hint {
     opacity: 1;
+    width: 20px;
+    height: 20px;
+    right: 4px;
+    bottom: 4px;
   }
 
   .banana-filter {
     width: 100%;
+  }
+
+  .prompt-card-title {
+    white-space: normal;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .prompt-card-desc {
+    -webkit-line-clamp: 2;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .prompt-card-actions {
+    margin-top: 4px;
+  }
+
+  .prompt-card-actions :deep(button) {
+    min-width: 36px;
+    min-height: 36px;
   }
 }
 </style>
