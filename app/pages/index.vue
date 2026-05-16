@@ -75,8 +75,8 @@ const handleClearMessages = () => {
           class="empty-state"
           id="empty-state"
         >
-          <Icon name="brand:google-logo" class="google-logo-svg" />
-          <h1>gemini-3-pro-image-preview</h1>
+          <img src="~/assets/image/logo.png" alt="logo" class="google-logo-svg" />
+          <h1>灵创绘图</h1>
           <p>并发生成 · 4K 渲染 · 本地存储</p>
         </div>
 
@@ -188,8 +188,8 @@ const handleClearMessages = () => {
 }
 
 .google-logo-svg {
-  width: 64px;
-  height: 64px;
+  width: 100px;
+  height: 100px;
 }
 
 .messages-area {

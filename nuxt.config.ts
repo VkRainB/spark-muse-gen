@@ -88,7 +88,7 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: '创作工作台',
+      title: '灵创设计',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' }
